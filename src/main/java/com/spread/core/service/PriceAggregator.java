@@ -19,6 +19,11 @@ public class PriceAggregator {
                 .put(exchange, ticker);
     }
 
+    /** Очищает все тикеры (вызывать при disconnect, чтобы не показывать устаревшие цены после переподключения). */
+    public void clear() {
+        tickersBySymbol.clear();
+    }
+
     public Map<Exchange, Ticker> getTickersForSymbol(String symbol) {
         ConcurrentMap<Exchange, Ticker> inner = tickersBySymbol.get(symbol);
         if (inner == null || inner.isEmpty()) {

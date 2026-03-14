@@ -30,19 +30,20 @@ public class CoinStorage {
         return new ArrayList<>(merged);
     }
 
-    public void addUserCoin(String symbol) {
+    /** @return true если монета добавлена и запись успешна (или уже была в списке), false при ошибке записи */
+    public boolean addUserCoin(String symbol) {
         List<String> current = new ArrayList<>(loadList(userCoinsPath));
         String normalized = symbol.trim().toUpperCase();
-        if (!normalized.isEmpty() && !current.contains(normalized)) {
-            current.add(normalized);
-            saveList(userCoinsPath, current);
+        if (normalized.isEmpty() || current.contains(normalized)) {
+            return true;
         }
+        current.add(normalized);
+        return saveList(userCoinsPath, current);
     }
 
-    /** Очищает оба списка (базовый и пользовательский), после чего список монет будет пустым. */
-    public void clearAll() {
-        saveList(baseCoinsPath, List.of());
-        saveList(userCoinsPath, List.of());
+    /** Очищает оба списка. @return true если обе записи успешны */
+    public boolean clearAll() {
+        return saveList(baseCoinsPath, List.of()) && saveList(userCoinsPath, List.of());
     }
 
     private List<String> loadList(Path path) {
@@ -62,13 +63,18 @@ public class CoinStorage {
         }
     }
 
-    private void saveList(Path path, List<String> symbols) {
+    private boolean saveList(Path path, List<String> symbols) {
         try {
-            Files.createDirectories(path.getParent());
+            Path parent = path.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
             byte[] bytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(symbols);
             Files.write(path, bytes);
+            return true;
         } catch (IOException e) {
             System.err.println("CoinStorage write error for " + path + ": " + e.getMessage());
+            return false;
         }
     }
 }

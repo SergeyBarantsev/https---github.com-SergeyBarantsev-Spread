@@ -1,5 +1,6 @@
 package com.spread.app;
 
+import com.spread.core.config.AppPaths;
 import com.spread.core.model.ArbitrageOpportunity;
 import com.spread.core.model.Settings;
 import com.spread.core.model.Settings.Exchange;
@@ -11,6 +12,7 @@ import com.spread.exchange.ExchangeManager;
 import com.spread.tools.CoinListGenerator;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -35,12 +37,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -55,17 +58,22 @@ public class MainApp extends Application {
     private final ArbitrageCalculator arbitrageCalculator = new ArbitrageCalculator();
     private final ExchangeManager exchangeManager = new ExchangeManager(priceAggregator);
     private final CoinStorage coinStorage = new CoinStorage(
-            Path.of("assets", "coins.json"),
-            Path.of("config", "user-coins.json")
+            AppPaths.baseCoinsFile(),
+            AppPaths.userCoinsFile()
     );
     private final SettingsStorage settingsStorage = new SettingsStorage(
-            Path.of("config", "settings.json")
+            AppPaths.settingsFile()
     );
 
-    private TextField depositFieldRef;
     private final Map<Exchange, TextField> buyFeeFields = new java.util.EnumMap<>(Exchange.class);
     private final Map<Exchange, TextField> sellFeeFields = new java.util.EnumMap<>(Exchange.class);
 
+    private final ExecutorService backgroundExecutor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        t.setName("spread-background-" + t.getId());
+        return t;
+    });
     private ScheduledExecutorService scheduler;
 
     @Override
@@ -101,6 +109,15 @@ public class MainApp extends Application {
             scheduler.shutdownNow();
         }
         exchangeManager.disconnectAll();
+        backgroundExecutor.shutdown();
+        try {
+            if (!backgroundExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                backgroundExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            backgroundExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
         AppLog.info("Application stopped");
     }
 
@@ -127,7 +144,6 @@ public class MainApp extends Application {
         if (settings.getDeposit() > 0) {
             depositField.setText(Double.toString(settings.getDeposit()));
         }
-        depositFieldRef = depositField;
         depositBox.getChildren().addAll(depositLabel, depositField);
 
         HBox feesHeader = new HBox(10);
@@ -162,9 +178,19 @@ public class MainApp extends Application {
                     .filter(TrackedCoin::isEnabled)
                     .map(TrackedCoin::getSymbol)
                     .toList();
+            if (symbols.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Нет монет для отслеживания");
+                alert.setHeaderText("Не выбрано ни одной монеты");
+                alert.setContentText("Включите хотя бы одну монету на вкладке «Монеты» и нажмите Start снова.");
+                alert.showAndWait();
+                return;
+            }
             AppLog.info("Connect to exchanges: {} symbols", symbols.size());
             exchangeManager.connectAll(symbols);
-            settingsStorage.save(settings);
+            if (!settingsStorage.save(settings)) {
+                AppLog.error("Failed to save settings");
+            }
             startScheduler();
             AppLog.info("Scheduler started");
         });
@@ -238,11 +264,34 @@ public class MainApp extends Application {
         }
     }
 
+    private static Callback<TableColumn<ArbitrageRow, Double>, TableCell<ArbitrageRow, Double>> decimalCellFactory(DecimalFormat format) {
+        return col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Double value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty || value == null) {
+                    setText(null);
+                } else {
+                    setText(format.format(value));
+                    setAlignment(Pos.CENTER_RIGHT);
+                }
+            }
+        };
+    }
+
     private VBox createCoinsPanel() {
         VBox box = new VBox(10);
         box.setPadding(new Insets(12, 16, 12, 16));
 
+        HBox headerBox = new HBox(10);
+        headerBox.setAlignment(Pos.CENTER_LEFT);
         Label title = new Label("Список монет для отслеживания");
+        Label countLabel = new Label();
+        countLabel.textProperty().bind(Bindings.createStringBinding(
+                () -> "Монет: " + trackedCoins.size(),
+                trackedCoins
+        ));
+        headerBox.getChildren().addAll(title, countLabel);
 
         TableView<TrackedCoin> table = new TableView<>(trackedCoins);
         table.setPrefHeight(250);
@@ -265,7 +314,19 @@ public class MainApp extends Application {
         enabledCol.setCellFactory(CheckBoxTableCell.forTableColumn(enabledCol));
         enabledCol.setPrefWidth(100);
 
-        table.getColumns().addAll(symbolCol, enabledCol);
+        TableColumn<TrackedCoin, String> exchangesCol = new TableColumn<>("Биржи");
+        exchangesCol.setCellValueFactory(param -> param.getValue().supportedExchangesProperty());
+        exchangesCol.setPrefWidth(220);
+        exchangesCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item);
+                setAlignment(Pos.CENTER_LEFT);
+            }
+        });
+
+        table.getColumns().addAll(symbolCol, enabledCol, exchangesCol);
         VBox.setVgrow(table, Priority.ALWAYS);
 
         HBox addBox = new HBox(10);
@@ -281,7 +342,7 @@ public class MainApp extends Application {
             }
             String normalized = symbol.trim().toUpperCase();
             AppLog.info("Add coin requested: {}", normalized);
-            Thread t = new Thread(() -> {
+            backgroundExecutor.execute(() -> {
                 try {
                     var support = CoinListGenerator.checkSymbolSupport(normalized);
                     long supportedCount = support.values().stream().filter(Boolean::booleanValue).count();
@@ -314,8 +375,15 @@ public class MainApp extends Application {
                             }
                         }
 
-                        trackedCoins.add(new TrackedCoin(normalized, true));
-                        coinStorage.addUserCoin(normalized);
+                        String exchangesStr = support.entrySet().stream()
+                                .filter(e2 -> Boolean.TRUE.equals(e2.getValue()))
+                                .map(e2 -> e2.getKey().name())
+                                .sorted()
+                                .collect(java.util.stream.Collectors.joining(", "));
+                        trackedCoins.add(new TrackedCoin(normalized, true, exchangesStr));
+                        if (!coinStorage.addUserCoin(normalized)) {
+                            AppLog.error("Failed to save user coin list after adding {}", normalized);
+                        }
                         newCoinField.clear();
                         AppLog.info("Coin added: {}", normalized);
                     });
@@ -329,15 +397,13 @@ public class MainApp extends Application {
                         alert.showAndWait();
                     });
                 }
-            }, "manual-coin-check-" + normalized);
-            t.setDaemon(true);
-            t.start();
+            });
         });
 
         Button refreshButton = new Button("Обновить с бирж");
         refreshButton.setOnAction(e -> {
             AppLog.info("Refresh coin list started");
-            Thread t = new Thread(() -> {
+            backgroundExecutor.execute(() -> {
                 try {
                     CoinListGenerator.generateAndSave();
                     List<String> symbols = coinStorage.loadMergedCoins();
@@ -363,9 +429,7 @@ public class MainApp extends Application {
                         alert.showAndWait();
                     });
                 }
-            }, "coin-list-refresh");
-            t.setDaemon(true);
-            t.start();
+            });
         });
 
         Button clearButton = new Button("Очистить список");
@@ -376,14 +440,16 @@ public class MainApp extends Application {
             confirm.setContentText("Список будет полностью очищен (и базовый, и добавленные вручную). Потом можно снова загрузить монеты кнопкой «Обновить с бирж».");
             if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 trackedCoins.clear();
-                coinStorage.clearAll();
+                if (!coinStorage.clearAll()) {
+                    AppLog.error("Failed to clear coin list files");
+                }
                 AppLog.info("Coin list cleared");
             }
         });
 
         addBox.getChildren().addAll(newCoinField, addButton, refreshButton, clearButton);
 
-        box.getChildren().addAll(title, table, addBox);
+        box.getChildren().addAll(headerBox, table, addBox);
         return box;
     }
 
@@ -460,57 +526,10 @@ public class MainApp extends Application {
         priceFormat.setGroupingUsed(false);
         DecimalFormat percentFormat = new DecimalFormat("0.00");
 
-        buyPriceCol.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(Double value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty || value == null) {
-                    setText(null);
-                } else {
-                    setText(priceFormat.format(value));
-                    setAlignment(Pos.CENTER_RIGHT);
-                }
-            }
-        });
-
-        sellPriceCol.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(Double value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty || value == null) {
-                    setText(null);
-                } else {
-                    setText(priceFormat.format(value));
-                    setAlignment(Pos.CENTER_RIGHT);
-                }
-            }
-        });
-
-        spreadCol.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(Double value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty || value == null) {
-                    setText(null);
-                } else {
-                    setText(percentFormat.format(value));
-                    setAlignment(Pos.CENTER_RIGHT);
-                }
-            }
-        });
-
-        profitCol.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(Double value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty || value == null) {
-                    setText(null);
-                } else {
-                    setText(priceFormat.format(value));
-                    setAlignment(Pos.CENTER_RIGHT);
-                }
-            }
-        });
+        buyPriceCol.setCellFactory(decimalCellFactory(priceFormat));
+        sellPriceCol.setCellFactory(decimalCellFactory(priceFormat));
+        spreadCol.setCellFactory(decimalCellFactory(percentFormat));
+        profitCol.setCellFactory(decimalCellFactory(priceFormat));
 
         table.getColumns().addAll(symbolCol, buyExchangeCol, buyPriceCol, sellExchangeCol, sellPriceCol, spreadCol, profitCol);
 
@@ -564,10 +583,18 @@ public class MainApp extends Application {
     public static class TrackedCoin {
         private final SimpleStringProperty symbol;
         private final javafx.beans.property.SimpleBooleanProperty enabled;
+        private final SimpleStringProperty supportedExchanges;
 
         public TrackedCoin(String symbol, boolean enabled) {
+            this(symbol, enabled, "—");
+        }
+
+        public TrackedCoin(String symbol, boolean enabled, String supportedExchanges) {
             this.symbol = new SimpleStringProperty(symbol);
             this.enabled = new javafx.beans.property.SimpleBooleanProperty(enabled);
+            this.supportedExchanges = new SimpleStringProperty(
+                    supportedExchanges != null && !supportedExchanges.isBlank() ? supportedExchanges : "—"
+            );
         }
 
         public String getSymbol() {
@@ -588,6 +615,18 @@ public class MainApp extends Application {
 
         public void setEnabled(boolean value) {
             enabled.set(value);
+        }
+
+        public String getSupportedExchanges() {
+            return supportedExchanges.get();
+        }
+
+        public void setSupportedExchanges(String value) {
+            supportedExchanges.set(value != null && !value.isBlank() ? value : "—");
+        }
+
+        public javafx.beans.property.StringProperty supportedExchangesProperty() {
+            return supportedExchanges;
         }
     }
 

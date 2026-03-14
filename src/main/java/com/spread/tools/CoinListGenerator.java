@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spread.app.AppLog;
+import com.spread.core.config.AppPaths;
 import com.spread.core.model.Settings;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -88,9 +89,9 @@ public class CoinListGenerator {
                 .sorted()
                 .collect(Collectors.toList());
 
-        Path assetsDir = Path.of("assets");
+        Path assetsDir = AppPaths.assetsDir();
         Files.createDirectories(assetsDir);
-        Path out = assetsDir.resolve("coins.json");
+        Path out = AppPaths.baseCoinsFile();
         byte[] json = MAPPER.writerWithDefaultPrettyPrinter()
                 .writeValueAsBytes(sorted);
         Files.write(out, json);

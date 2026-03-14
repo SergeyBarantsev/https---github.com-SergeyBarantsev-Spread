@@ -12,6 +12,8 @@ import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import okio.ByteString;
 
+import com.spread.core.config.AppPaths;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -145,9 +147,9 @@ public class KucoinClient extends WebSocketListener implements ExchangeClient {
             return;
         }
         try {
-            Path logDir = Path.of("log");
+            Path logDir = AppPaths.logDir();
             Files.createDirectories(logDir);
-            Path logFile = logDir.resolve("kucoin-error.log");
+            Path logFile = AppPaths.kucoinErrorLogFile();
             StringWriter sw = new StringWriter();
             sw.append("--- ").append(Instant.now().toString()).append(" ---\n");
             sw.append("Message: ").append(t.getMessage() != null ? t.getMessage() : "(null)").append("\n");

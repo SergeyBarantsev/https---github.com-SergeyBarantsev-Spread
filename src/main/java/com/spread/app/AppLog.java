@@ -1,8 +1,11 @@
 package com.spread.app;
 
+import com.spread.core.config.AppPaths;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -10,12 +13,14 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Простое логирование в файл log/app.log (UTF-8).
- * Используется для основных процессов приложения.
+ * Ротация: при размере файла &gt; MAX_LOG_BYTES текущий лог переименовывается в app.log.old, запись идёт в новый app.log.
  */
 public final class AppLog {
 
-    private static final Path LOG_DIR = Path.of("log");
-    private static final Path LOG_FILE = LOG_DIR.resolve("app.log");
+    private static final long MAX_LOG_BYTES = 5L * 1024 * 1024; // 5 МБ
+    private static final Path LOG_DIR = AppPaths.logDir();
+    private static final Path LOG_FILE = AppPaths.appLogFile();
+    private static final Path LOG_FILE_OLD = LOG_DIR.resolve("app.log.old");
     private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.systemDefault());
 
@@ -64,6 +69,9 @@ public final class AppLog {
     private static synchronized void log(String level, String message, Throwable t) {
         try {
             Files.createDirectories(LOG_DIR);
+            if (Files.exists(LOG_FILE) && Files.size(LOG_FILE) >= MAX_LOG_BYTES) {
+                Files.move(LOG_FILE, LOG_FILE_OLD, StandardCopyOption.REPLACE_EXISTING);
+            }
             String ts = FORMAT.format(Instant.now());
             StringBuilder line = new StringBuilder();
             line.append("[").append(ts).append("] [").append(level).append("] ").append(message);

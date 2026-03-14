@@ -1,0 +1,13 @@
+[2026-03-14 14:24:54] [INFO] Settings loaded
+[2026-03-14 14:24:54] [INFO] Coins loaded: 564 symbols
+[2026-03-14 14:24:55] [INFO] Application started
+[2026-03-14 14:25:00] [INFO] Coin list cleared
+[2026-03-14 14:25:02] [INFO] Refresh coin list started
+[2026-03-14 14:25:02] [INFO] Generate coin list started
+[2026-03-14 14:25:05] [INFO] Binance OK: 444 symbols
+[2026-03-14 14:25:05] [INFO] Bybit OK: 469 symbols
+[2026-03-14 14:25:07] [INFO] OKX OK: 292 symbols
+[2026-03-14 14:25:09] [INFO] KuCoin OK: 939 symbols
+[2026-03-14 14:25:09] [INFO] Generate coin list done: 564 symbols from 4 exchanges -> D:cursorProjectsSpreadassetscoins.json
+[2026-03-14 14:25:09] [INFO] Refresh coin list OK: 564 symbols
+[2026-03-14 14:26:56] [INFO] Application stopped

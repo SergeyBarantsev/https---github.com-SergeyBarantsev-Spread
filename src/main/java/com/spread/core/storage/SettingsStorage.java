@@ -32,13 +32,19 @@ public class SettingsStorage {
         }
     }
 
-    public void save(Settings settings) {
+    /** @return true если запись успешна */
+    public boolean save(Settings settings) {
         try {
-            Files.createDirectories(settingsPath.getParent());
+            Path parent = settingsPath.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
             byte[] bytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(settings);
             Files.write(settingsPath, bytes);
+            return true;
         } catch (IOException e) {
             System.err.println("SettingsStorage write error for " + settingsPath + ": " + e.getMessage());
+            return false;
         }
     }
 }

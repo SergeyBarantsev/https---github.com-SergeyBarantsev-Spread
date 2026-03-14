@@ -12,9 +12,11 @@ import java.util.Map;
 public class ExchangeManager {
 
     private final OkHttpClient httpClient = new OkHttpClient();
+    private final PriceAggregator aggregator;
     private final Map<Exchange, ExchangeClient> clients = new EnumMap<>(Exchange.class);
 
     public ExchangeManager(PriceAggregator aggregator) {
+        this.aggregator = aggregator;
         clients.put(Exchange.BINANCE, new BinanceClient(httpClient, aggregator));
         clients.put(Exchange.BYBIT, new BybitClient(httpClient, aggregator));
         clients.put(Exchange.OKX, new OkxClient(httpClient, aggregator));
@@ -29,6 +31,7 @@ public class ExchangeManager {
     }
 
     public void disconnectAll() {
+        aggregator.clear();
         for (ExchangeClient client : clients.values()) {
             client.disconnect();
         }
