@@ -120,7 +120,8 @@ public class KucoinClient extends WebSocketListener implements ExchangeClient {
 
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-        System.err.println("KucoinClient failure: " + (t != null ? t.getMessage() : "unknown"));
+        String msg = toFailureMessage(t);
+        System.err.println("KucoinClient failure: " + msg);
         synchronized (this) {
             if (this.webSocket == webSocket && currentSymbols != null && !currentSymbols.isEmpty()) {
                 int attempt = ++reconnectAttempts;
@@ -128,6 +129,22 @@ public class KucoinClient extends WebSocketListener implements ExchangeClient {
                 RECONNECT_SCHEDULER.schedule(() -> connect(currentSymbols), delaySeconds, TimeUnit.SECONDS);
             }
         }
+    }
+
+    /** Сообщение для лога без кириллицы, чтобы не ломаться в консоли с другой кодировкой. */
+    private static String toFailureMessage(Throwable t) {
+        if (t == null) {
+            return "unknown";
+        }
+        String type = t.getClass().getSimpleName();
+        String m = t.getMessage();
+        if (m == null || m.isBlank()) {
+            return type;
+        }
+        if (m.codePoints().allMatch(c -> c < 128)) {
+            return m;
+        }
+        return type + " (check encoding)";
     }
 
     private String toDashSymbol(String s) {
