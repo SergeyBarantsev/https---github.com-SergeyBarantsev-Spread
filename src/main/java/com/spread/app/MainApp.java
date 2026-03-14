@@ -310,12 +310,18 @@ public class MainApp extends Application {
         });
 
         TableColumn<TrackedCoin, Boolean> enabledCol = new TableColumn<>("Включена");
-        enabledCol.setCellValueFactory(param -> param.getValue().enabledProperty());
+        enabledCol.setCellValueFactory(param -> {
+            TrackedCoin coin = param.getValue();
+            return coin != null ? coin.enabledProperty() : new javafx.beans.property.SimpleBooleanProperty(false);
+        });
         enabledCol.setCellFactory(CheckBoxTableCell.forTableColumn(enabledCol));
         enabledCol.setPrefWidth(100);
 
         TableColumn<TrackedCoin, String> exchangesCol = new TableColumn<>("Биржи");
-        exchangesCol.setCellValueFactory(param -> param.getValue().supportedExchangesProperty());
+        exchangesCol.setCellValueFactory(param -> {
+            TrackedCoin coin = param.getValue();
+            return coin != null ? coin.supportedExchangesProperty() : new SimpleStringProperty("—");
+        });
         exchangesCol.setPrefWidth(220);
         exchangesCol.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -389,11 +395,21 @@ public class MainApp extends Application {
                     });
                 } catch (IOException ex) {
                     AppLog.error("Add coin failed: " + normalized, ex);
+                    String msg = ex.getMessage();
                     Platform.runLater(() -> {
                         Alert alert = new Alert(Alert.AlertType.ERROR);
                         alert.setTitle("Ошибка проверки монеты");
                         alert.setHeaderText("Не удалось проверить монету " + normalized);
-                        alert.setContentText("Ошибка сети или API биржи: " + ex.getMessage());
+                        alert.setContentText("Ошибка сети или API биржи. Проверьте интернет.\n\nДетали: " + (msg != null ? msg : ex.getClass().getSimpleName()));
+                        alert.showAndWait();
+                    });
+                } catch (Throwable t) {
+                    AppLog.error("Add coin error: " + normalized, t);
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Ошибка");
+                        alert.setHeaderText("Ошибка при добавлении монеты " + normalized);
+                        alert.setContentText(t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName());
                         alert.showAndWait();
                     });
                 }
