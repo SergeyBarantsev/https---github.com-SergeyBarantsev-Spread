@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -24,10 +25,13 @@ import java.util.stream.Collectors;
  * Каждая биржа опрашивается отдельно; при таймауте или ошибке она пропускается.
  * Требуется минимум 2 успешных биржи для формирования списка (монеты, торгуемые хотя бы на двух).
  *
- * Результат пишет в assets/coins.json в формате массива строк, например:
- * ["BTCUSDT","ETHUSDT", ...]
+ * Результат пишет в assets/coins.json в формате массива строк.
+ * Возвращает список символов с информацией, на каких биржах торгуется каждая монета.
  */
 public class CoinListGenerator {
+
+    /** Символ и множество бирж, на которых он торгуется. */
+    public record SymbolExchanges(String symbol, Set<Settings.Exchange> exchanges) {}
 
     private static final int MIN_EXCHANGES_REQUIRED = 2;
     private static final int CALL_TIMEOUT_SECONDS = 45;
@@ -37,14 +41,16 @@ public class CoinListGenerator {
             .callTimeout(Duration.ofSeconds(CALL_TIMEOUT_SECONDS))
             .build();
 
-    public static List<String> generateAndSave() throws IOException {
+    public static List<SymbolExchanges> generateAndSave() throws IOException {
         AppLog.info("Generate coin list started");
         java.util.Map<String, Integer> counts = new java.util.HashMap<>();
+        java.util.Map<String, Set<Settings.Exchange>> symbolToExchanges = new java.util.HashMap<>();
         int okCount = 0;
 
         try {
             Set<String> s = fetchBinanceUsdtSymbols();
             incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.BINANCE);
             okCount++;
             AppLog.info("Binance OK: {} symbols", s.size());
         } catch (Exception e) {
@@ -53,6 +59,7 @@ public class CoinListGenerator {
         try {
             Set<String> s = fetchBybitUsdtSymbols();
             incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.BYBIT);
             okCount++;
             AppLog.info("Bybit OK: {} symbols", s.size());
         } catch (Exception e) {
@@ -61,6 +68,7 @@ public class CoinListGenerator {
         try {
             Set<String> s = fetchOkxUsdtSymbols();
             incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.OKX);
             okCount++;
             AppLog.info("OKX OK: {} symbols", s.size());
         } catch (Exception e) {
@@ -69,6 +77,7 @@ public class CoinListGenerator {
         try {
             Set<String> s = fetchKucoinUsdtSymbols();
             incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.KUCOIN);
             okCount++;
             AppLog.info("KuCoin OK: {} symbols", s.size());
         } catch (Exception e) {
@@ -85,19 +94,29 @@ public class CoinListGenerator {
                 .map(java.util.Map.Entry::getKey)
                 .collect(java.util.stream.Collectors.toSet());
 
-        List<String> sorted = atLeastTwo.stream()
+        List<SymbolExchanges> result = atLeastTwo.stream()
                 .sorted()
+                .map(sym -> new SymbolExchanges(sym, symbolToExchanges.getOrDefault(sym, Set.of())))
                 .collect(Collectors.toList());
 
+        List<String> sortedSymbols = result.stream().map(SymbolExchanges::symbol).collect(Collectors.toList());
         Path assetsDir = AppPaths.assetsDir();
         Files.createDirectories(assetsDir);
         Path out = AppPaths.baseCoinsFile();
         byte[] json = MAPPER.writerWithDefaultPrettyPrinter()
-                .writeValueAsBytes(sorted);
+                .writeValueAsBytes(sortedSymbols);
         Files.write(out, json);
 
-        AppLog.info("Generate coin list done: {} symbols from {} exchanges -> {}", sorted.size(), okCount, out.toAbsolutePath());
-        return sorted;
+        AppLog.info("Generate coin list done: {} symbols from {} exchanges -> {}", result.size(), okCount, out.toAbsolutePath());
+        return result;
+    }
+
+    private static void addExchanges(java.util.Map<String, Set<Settings.Exchange>> symbolToExchanges,
+                                    Set<String> symbols, Settings.Exchange exchange) {
+        for (String sym : symbols) {
+            symbolToExchanges.computeIfAbsent(sym, k -> new TreeSet<>(java.util.Comparator.comparing(Settings.Exchange::name)))
+                    .add(exchange);
+        }
     }
 
     /**

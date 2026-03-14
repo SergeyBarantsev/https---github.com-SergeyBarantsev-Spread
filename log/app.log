@@ -24,3 +24,19 @@
 [2026-03-14 14:38:00] [INFO] Generate coin list done: 564 symbols from 4 exchanges -> D:cursorProjectsSpreadassetscoins.json
 [2026-03-14 14:38:00] [INFO] Refresh coin list OK: 564 symbols
 [2026-03-14 14:38:18] [INFO] Application stopped
+[2026-03-14 14:40:34] [INFO] Settings loaded
+[2026-03-14 14:40:34] [INFO] Coins loaded: 564 symbols
+[2026-03-14 14:40:35] [INFO] Application started
+[2026-03-14 14:40:38] [INFO] Coin list cleared
+[2026-03-14 14:40:50] [INFO] Add coin requested: BTCUSDT
+[2026-03-14 14:40:58] [INFO] Coin added: BTCUSDT
+[2026-03-14 14:41:09] [INFO] Coin list cleared
+[2026-03-14 14:41:10] [INFO] Refresh coin list started
+[2026-03-14 14:41:10] [INFO] Generate coin list started
+[2026-03-14 14:41:11] [INFO] Binance OK: 444 symbols
+[2026-03-14 14:41:12] [INFO] Bybit OK: 469 symbols
+[2026-03-14 14:41:12] [INFO] OKX OK: 292 symbols
+[2026-03-14 14:41:12] [INFO] KuCoin OK: 939 symbols
+[2026-03-14 14:41:12] [INFO] Generate coin list done: 564 symbols from 4 exchanges -> D:cursorProjectsSpreadassetscoins.json
+[2026-03-14 14:41:12] [INFO] Refresh coin list OK: 564 symbols
+[2026-03-14 14:41:44] [INFO] Application stopped

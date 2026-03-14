@@ -421,17 +421,24 @@ public class MainApp extends Application {
             AppLog.info("Refresh coin list started");
             backgroundExecutor.execute(() -> {
                 try {
-                    CoinListGenerator.generateAndSave();
-                    List<String> symbols = coinStorage.loadMergedCoins();
-                    if (symbols.isEmpty()) {
-                        symbols = List.of("BTCUSDT", "ETHUSDT", "BNBUSDT");
+                    List<CoinListGenerator.SymbolExchanges> fromApi = CoinListGenerator.generateAndSave();
+                    List<String> merged = coinStorage.loadMergedCoins();
+                    if (merged.isEmpty()) {
+                        merged = List.of("BTCUSDT", "ETHUSDT", "BNBUSDT");
                     }
-                    List<String> finalSymbols = symbols;
-                    AppLog.info("Refresh coin list OK: {} symbols", finalSymbols.size());
+                    java.util.Map<String, java.util.Set<Exchange>> exchangeMap = fromApi.stream()
+                            .collect(java.util.stream.Collectors.toMap(CoinListGenerator.SymbolExchanges::symbol, CoinListGenerator.SymbolExchanges::exchanges));
+                    List<String> finalMerged = merged;
+                    java.util.Map<String, java.util.Set<Exchange>> finalExchangeMap = exchangeMap;
+                    AppLog.info("Refresh coin list OK: {} symbols", finalMerged.size());
                     Platform.runLater(() -> {
                         trackedCoins.clear();
-                        for (String s : finalSymbols) {
-                            trackedCoins.add(new TrackedCoin(s, true));
+                        for (String s : finalMerged) {
+                            java.util.Set<Exchange> ex = finalExchangeMap.get(s);
+                            String exchangesStr = (ex != null && !ex.isEmpty())
+                                    ? ex.stream().map(Exchange::name).sorted().collect(java.util.stream.Collectors.joining(", "))
+                                    : "—";
+                            trackedCoins.add(new TrackedCoin(s, true, exchangesStr));
                         }
                     });
                 } catch (IOException ex) {
