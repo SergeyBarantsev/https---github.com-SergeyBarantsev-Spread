@@ -92,6 +92,7 @@ public class MainApp extends Application {
         primaryStage.setTitle("Crypto Spread Monitor");
         primaryStage.setScene(scene);
         primaryStage.show();
+        AppLog.info("Application started");
     }
 
     @Override
@@ -100,6 +101,7 @@ public class MainApp extends Application {
             scheduler.shutdownNow();
         }
         exchangeManager.disconnectAll();
+        AppLog.info("Application stopped");
     }
 
     public static void main(String[] args) {
@@ -160,9 +162,11 @@ public class MainApp extends Application {
                     .filter(TrackedCoin::isEnabled)
                     .map(TrackedCoin::getSymbol)
                     .toList();
+            AppLog.info("Connect to exchanges: {} symbols", symbols.size());
             exchangeManager.connectAll(symbols);
             settingsStorage.save(settings);
             startScheduler();
+            AppLog.info("Scheduler started");
         });
 
         stopButton.setOnAction(e -> {
@@ -171,6 +175,7 @@ public class MainApp extends Application {
                 scheduler = null;
             }
             exchangeManager.disconnectAll();
+            AppLog.info("Disconnected from exchanges");
         });
 
         box.getChildren().addAll(depositBox, feesHeader, binanceBox, bybitBox, okxBox, kucoinBox, buttonsBox);
@@ -275,7 +280,7 @@ public class MainApp extends Application {
                 return;
             }
             String normalized = symbol.trim().toUpperCase();
-            // Проверяем монету в отдельном потоке, чтобы не блокировать UI
+            AppLog.info("Add coin requested: {}", normalized);
             Thread t = new Thread(() -> {
                 try {
                     var support = CoinListGenerator.checkSymbolSupport(normalized);
@@ -312,8 +317,10 @@ public class MainApp extends Application {
                         trackedCoins.add(new TrackedCoin(normalized, true));
                         coinStorage.addUserCoin(normalized);
                         newCoinField.clear();
+                        AppLog.info("Coin added: {}", normalized);
                     });
                 } catch (IOException ex) {
+                    AppLog.error("Add coin failed: " + normalized, ex);
                     Platform.runLater(() -> {
                         Alert alert = new Alert(Alert.AlertType.ERROR);
                         alert.setTitle("Ошибка проверки монеты");
@@ -329,7 +336,7 @@ public class MainApp extends Application {
 
         Button refreshButton = new Button("Обновить с бирж");
         refreshButton.setOnAction(e -> {
-            // Запуск в отдельном потоке, чтобы не блокировать UI
+            AppLog.info("Refresh coin list started");
             Thread t = new Thread(() -> {
                 try {
                     CoinListGenerator.generateAndSave();
@@ -338,6 +345,7 @@ public class MainApp extends Application {
                         symbols = List.of("BTCUSDT", "ETHUSDT", "BNBUSDT");
                     }
                     List<String> finalSymbols = symbols;
+                    AppLog.info("Refresh coin list OK: {} symbols", finalSymbols.size());
                     Platform.runLater(() -> {
                         trackedCoins.clear();
                         for (String s : finalSymbols) {
@@ -345,6 +353,7 @@ public class MainApp extends Application {
                         }
                     });
                 } catch (IOException ex) {
+                    AppLog.error("Refresh coin list failed", ex);
                     String msg = ex.getMessage() != null ? ex.getMessage() : "Неизвестная ошибка";
                     Platform.runLater(() -> {
                         Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -368,6 +377,7 @@ public class MainApp extends Application {
             if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 trackedCoins.clear();
                 coinStorage.clearAll();
+                AppLog.info("Coin list cleared");
             }
         });
 
@@ -445,7 +455,9 @@ public class MainApp extends Application {
         profitCol.setCellValueFactory(new PropertyValueFactory<>("expectedProfit"));
         profitCol.setPrefWidth(ARB_PROFIT_WIDTH);
 
-        DecimalFormat priceFormat = new DecimalFormat("0.0000");
+        // До 10 знаков после запятой, без экспоненты (E-4)
+        DecimalFormat priceFormat = new DecimalFormat("0.##########");
+        priceFormat.setGroupingUsed(false);
         DecimalFormat percentFormat = new DecimalFormat("0.00");
 
         buyPriceCol.setCellFactory(col -> new TableCell<>() {
@@ -455,7 +467,7 @@ public class MainApp extends Application {
                 if (empty || value == null) {
                     setText(null);
                 } else {
-                    setText(Double.toString(value));
+                    setText(priceFormat.format(value));
                     setAlignment(Pos.CENTER_RIGHT);
                 }
             }
@@ -468,7 +480,7 @@ public class MainApp extends Application {
                 if (empty || value == null) {
                     setText(null);
                 } else {
-                    setText(Double.toString(value));
+                    setText(priceFormat.format(value));
                     setAlignment(Pos.CENTER_RIGHT);
                 }
             }
@@ -533,12 +545,12 @@ public class MainApp extends Application {
     private void loadCoins() {
         List<String> symbols = coinStorage.loadMergedCoins();
         if (symbols.isEmpty()) {
-            // default popular coins if no files yet
             symbols = List.of("BTCUSDT", "ETHUSDT", "BNBUSDT");
         }
         for (String s : symbols) {
             trackedCoins.add(new TrackedCoin(s, true));
         }
+        AppLog.info("Coins loaded: {} symbols", trackedCoins.size());
     }
 
     private void loadSettings() {
@@ -546,6 +558,7 @@ public class MainApp extends Application {
         settings.setDeposit(loaded.getDeposit());
         settings.getFees().clear();
         settings.getFees().putAll(loaded.getFees());
+        AppLog.info("Settings loaded");
     }
 
     public static class TrackedCoin {

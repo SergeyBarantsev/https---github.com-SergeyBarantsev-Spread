@@ -13,6 +13,13 @@ import okhttp3.WebSocketListener;
 import okio.ByteString;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -120,8 +127,9 @@ public class KucoinClient extends WebSocketListener implements ExchangeClient {
 
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
+        logFailureToFile(t);
         String msg = toFailureMessage(t);
-        System.err.println("KucoinClient failure: " + msg);
+        System.err.println("KucoinClient failure: " + msg + " (details in log/kucoin-error.log)");
         synchronized (this) {
             if (this.webSocket == webSocket && currentSymbols != null && !currentSymbols.isEmpty()) {
                 int attempt = ++reconnectAttempts;
@@ -131,7 +139,28 @@ public class KucoinClient extends WebSocketListener implements ExchangeClient {
         }
     }
 
-    /** Сообщение для лога без кириллицы, чтобы не ломаться в консоли с другой кодировкой. */
+    /** Пишет полный текст ошибки в UTF-8 файл, чтобы прочитать сообщение в любой кодировке (в т.ч. кириллицу). */
+    private static void logFailureToFile(Throwable t) {
+        if (t == null) {
+            return;
+        }
+        try {
+            Path logDir = Path.of("log");
+            Files.createDirectories(logDir);
+            Path logFile = logDir.resolve("kucoin-error.log");
+            StringWriter sw = new StringWriter();
+            sw.append("--- ").append(Instant.now().toString()).append(" ---\n");
+            sw.append("Message: ").append(t.getMessage() != null ? t.getMessage() : "(null)").append("\n");
+            t.printStackTrace(new PrintWriter(sw));
+            sw.append("\n");
+            Files.write(logFile, sw.toString().getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (Exception e) {
+            System.err.println("Could not write KucoinClient error to log: " + e.getMessage());
+        }
+    }
+
+    /** Сообщение для консоли без кириллицы, чтобы не ломаться в другой кодировке. */
     private static String toFailureMessage(Throwable t) {
         if (t == null) {
             return "unknown";

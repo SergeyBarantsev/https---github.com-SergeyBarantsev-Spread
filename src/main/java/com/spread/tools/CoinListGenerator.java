@@ -3,6 +3,7 @@ package com.spread.tools;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spread.app.AppLog;
 import com.spread.core.model.Settings;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -36,6 +37,7 @@ public class CoinListGenerator {
             .build();
 
     public static List<String> generateAndSave() throws IOException {
+        AppLog.info("Generate coin list started");
         java.util.Map<String, Integer> counts = new java.util.HashMap<>();
         int okCount = 0;
 
@@ -43,36 +45,37 @@ public class CoinListGenerator {
             Set<String> s = fetchBinanceUsdtSymbols();
             incrementCounts(counts, s);
             okCount++;
-            System.out.println("Binance USDT symbols: " + s.size());
+            AppLog.info("Binance OK: {} symbols", s.size());
         } catch (Exception e) {
-            System.err.println("Binance: " + e.getMessage());
+            AppLog.warn("Binance failed: {}", e.getMessage());
         }
         try {
             Set<String> s = fetchBybitUsdtSymbols();
             incrementCounts(counts, s);
             okCount++;
-            System.out.println("Bybit   USDT symbols: " + s.size());
+            AppLog.info("Bybit OK: {} symbols", s.size());
         } catch (Exception e) {
-            System.err.println("Bybit: " + e.getMessage());
+            AppLog.warn("Bybit failed: {}", e.getMessage());
         }
         try {
             Set<String> s = fetchOkxUsdtSymbols();
             incrementCounts(counts, s);
             okCount++;
-            System.out.println("OKX     USDT symbols: " + s.size());
+            AppLog.info("OKX OK: {} symbols", s.size());
         } catch (Exception e) {
-            System.err.println("OKX: " + e.getMessage());
+            AppLog.warn("OKX failed: {}", e.getMessage());
         }
         try {
             Set<String> s = fetchKucoinUsdtSymbols();
             incrementCounts(counts, s);
             okCount++;
-            System.out.println("KuCoin  USDT symbols: " + s.size());
+            AppLog.info("KuCoin OK: {} symbols", s.size());
         } catch (Exception e) {
-            System.err.println("KuCoin: " + e.getMessage());
+            AppLog.warn("KuCoin failed: {}", e.getMessage());
         }
 
         if (okCount < MIN_EXCHANGES_REQUIRED) {
+            AppLog.error("Generate coin list failed: only {} exchanges responded (min {})", okCount, MIN_EXCHANGES_REQUIRED);
             throw new IOException("Удалось получить данные только с " + okCount + " бирж(и). Нужно минимум " + MIN_EXCHANGES_REQUIRED + " для формирования списка монет.");
         }
 
@@ -85,8 +88,6 @@ public class CoinListGenerator {
                 .sorted()
                 .collect(Collectors.toList());
 
-        System.out.println("Symbols traded on >= " + MIN_EXCHANGES_REQUIRED + " exchanges: " + sorted.size());
-
         Path assetsDir = Path.of("assets");
         Files.createDirectories(assetsDir);
         Path out = assetsDir.resolve("coins.json");
@@ -94,7 +95,7 @@ public class CoinListGenerator {
                 .writeValueAsBytes(sorted);
         Files.write(out, json);
 
-        System.out.println("Written " + sorted.size() + " symbols to " + out.toAbsolutePath());
+        AppLog.info("Generate coin list done: {} symbols from {} exchanges -> {}", sorted.size(), okCount, out.toAbsolutePath());
         return sorted;
     }
 
