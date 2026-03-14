@@ -8,6 +8,7 @@ import com.spread.core.service.PriceAggregator;
 import com.spread.core.storage.CoinStorage;
 import com.spread.core.storage.SettingsStorage;
 import com.spread.exchange.ExchangeManager;
+import com.spread.tools.CoinListGenerator;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -17,9 +18,14 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxTableCell;
@@ -30,7 +36,9 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -63,18 +71,22 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         BorderPane root = new BorderPane();
-
         loadSettings();
-
-        VBox topPanel = createSettingsPanel();
-        VBox middlePanel = createCoinsPanel();
-        VBox bottomPanel = createArbitragePanel();
-
         loadCoins();
 
-        root.setTop(topPanel);
-        root.setCenter(middlePanel);
-        root.setBottom(bottomPanel);
+        // Главная вкладка: настройки (депозит, комиссии, кнопки) + таблица арбитража
+        BorderPane mainContent = new BorderPane();
+        mainContent.setTop(createSettingsPanel());
+        mainContent.setCenter(createArbitragePanel());
+        Tab mainTab = new Tab("Мониторинг", mainContent);
+        mainTab.setClosable(false);
+
+        // Вкладка управления монетами
+        Tab coinsTab = new Tab("Монеты", createCoinsPanel());
+        coinsTab.setClosable(false);
+
+        TabPane tabPane = new TabPane(mainTab, coinsTab);
+        root.setCenter(tabPane);
 
         Scene scene = new Scene(root, 1200, 700);
         primaryStage.setTitle("Crypto Spread Monitor");
@@ -94,22 +106,29 @@ public class MainApp extends Application {
         launch(args);
     }
 
-    private VBox createSettingsPanel() {
-        VBox box = new VBox(8);
-        box.setPadding(new Insets(10));
+    private static final double LABEL_MIN_WIDTH = 90;
+    private static final double DEPOSIT_FIELD_WIDTH = 140;
+    private static final double FEE_FIELD_WIDTH = 72;
 
-        HBox depositBox = new HBox(8);
+    private VBox createSettingsPanel() {
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(12, 16, 12, 16));
+
+        HBox depositBox = new HBox(10);
         depositBox.setAlignment(Pos.CENTER_LEFT);
         Label depositLabel = new Label("Депозит (USDT):");
+        depositLabel.setMinWidth(LABEL_MIN_WIDTH);
         TextField depositField = new TextField();
         depositField.setPromptText("Например, 1000");
+        depositField.setPrefWidth(DEPOSIT_FIELD_WIDTH);
+        depositField.setMaxWidth(DEPOSIT_FIELD_WIDTH);
         if (settings.getDeposit() > 0) {
             depositField.setText(Double.toString(settings.getDeposit()));
         }
         depositFieldRef = depositField;
         depositBox.getChildren().addAll(depositLabel, depositField);
 
-        HBox feesHeader = new HBox(8);
+        HBox feesHeader = new HBox(10);
         feesHeader.setAlignment(Pos.CENTER_LEFT);
         feesHeader.getChildren().add(new Label("Комиссии бирж (% покупка / продажа):"));
 
@@ -118,7 +137,7 @@ public class MainApp extends Application {
         HBox okxBox = createExchangeFeeRow("OKX", Exchange.OKX);
         HBox kucoinBox = createExchangeFeeRow("KuCoin", Exchange.KUCOIN);
 
-        HBox buttonsBox = new HBox(10);
+        HBox buttonsBox = new HBox(12);
         buttonsBox.setAlignment(Pos.CENTER_LEFT);
         Button startButton = new Button("Start / Connect");
         Button stopButton = new Button("Stop / Disconnect");
@@ -159,15 +178,18 @@ public class MainApp extends Application {
     }
 
     private HBox createExchangeFeeRow(String exchangeName, Exchange exchange) {
-        HBox box = new HBox(8);
+        HBox box = new HBox(10);
         box.setAlignment(Pos.CENTER_LEFT);
         Label nameLabel = new Label(exchangeName + ":");
+        nameLabel.setMinWidth(LABEL_MIN_WIDTH);
         TextField buyFeeField = new TextField();
-        buyFeeField.setPromptText("buy %");
-        buyFeeField.setPrefWidth(70);
+        buyFeeField.setPromptText("покупка %");
+        buyFeeField.setPrefWidth(FEE_FIELD_WIDTH);
+        buyFeeField.setMaxWidth(FEE_FIELD_WIDTH);
         TextField sellFeeField = new TextField();
-        sellFeeField.setPromptText("sell %");
-        sellFeeField.setPrefWidth(70);
+        sellFeeField.setPromptText("продажа %");
+        sellFeeField.setPrefWidth(FEE_FIELD_WIDTH);
+        sellFeeField.setMaxWidth(FEE_FIELD_WIDTH);
         box.getChildren().addAll(nameLabel, buyFeeField, sellFeeField);
 
         buyFeeFields.put(exchange, buyFeeField);
@@ -212,17 +234,26 @@ public class MainApp extends Application {
     }
 
     private VBox createCoinsPanel() {
-        VBox box = new VBox(8);
-        box.setPadding(new Insets(10));
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(12, 16, 12, 16));
 
         Label title = new Label("Список монет для отслеживания");
 
         TableView<TrackedCoin> table = new TableView<>(trackedCoins);
         table.setPrefHeight(250);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<TrackedCoin, String> symbolCol = new TableColumn<>("Монета");
         symbolCol.setCellValueFactory(new PropertyValueFactory<>("symbol"));
-        symbolCol.setPrefWidth(150);
+        symbolCol.setPrefWidth(200);
+        symbolCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item);
+                setAlignment(Pos.CENTER_LEFT);
+            }
+        });
 
         TableColumn<TrackedCoin, Boolean> enabledCol = new TableColumn<>("Включена");
         enabledCol.setCellValueFactory(param -> param.getValue().enabledProperty());
@@ -230,8 +261,9 @@ public class MainApp extends Application {
         enabledCol.setPrefWidth(100);
 
         table.getColumns().addAll(symbolCol, enabledCol);
+        VBox.setVgrow(table, Priority.ALWAYS);
 
-        HBox addBox = new HBox(8);
+        HBox addBox = new HBox(10);
         addBox.setAlignment(Pos.CENTER_LEFT);
         TextField newCoinField = new TextField();
         HBox.setHgrow(newCoinField, Priority.ALWAYS);
@@ -239,48 +271,234 @@ public class MainApp extends Application {
         Button addButton = new Button("Добавить");
         addButton.setOnAction(e -> {
             String symbol = newCoinField.getText();
-            if (symbol != null && !symbol.isBlank()) {
-                String normalized = symbol.trim().toUpperCase();
-                trackedCoins.add(new TrackedCoin(normalized, true));
-                coinStorage.addUserCoin(normalized);
-                newCoinField.clear();
+            if (symbol == null || symbol.isBlank()) {
+                return;
+            }
+            String normalized = symbol.trim().toUpperCase();
+            // Проверяем монету в отдельном потоке, чтобы не блокировать UI
+            Thread t = new Thread(() -> {
+                try {
+                    var support = CoinListGenerator.checkSymbolSupport(normalized);
+                    long supportedCount = support.values().stream().filter(Boolean::booleanValue).count();
+                    Platform.runLater(() -> {
+                        if (supportedCount == 0) {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("Монета не найдена");
+                            alert.setHeaderText("Монета " + normalized + " не поддерживается ни одной из бирж");
+                            alert.setContentText("Проверьте, правильно ли введён тикер, и не была ли монета делистнута.");
+                            alert.showAndWait();
+                            return;
+                        }
+
+                        var unsupported = support.entrySet().stream()
+                                .filter(e2 -> !Boolean.TRUE.equals(e2.getValue()))
+                                .map(e2 -> e2.getKey().name())
+                                .toList();
+
+                        if (!unsupported.isEmpty()) {
+                            String msg = "Монета " + normalized + " не поддерживается на биржах: "
+                                    + String.join(", ", unsupported)
+                                    + ".\nПродолжить добавление?";
+                            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                            alert.setTitle("Частичная поддержка монеты");
+                            alert.setHeaderText("Монета не поддержана на части бирж");
+                            alert.setContentText(msg);
+                            var result = alert.showAndWait();
+                            if (result.isEmpty() || result.get() != ButtonType.OK) {
+                                return;
+                            }
+                        }
+
+                        trackedCoins.add(new TrackedCoin(normalized, true));
+                        coinStorage.addUserCoin(normalized);
+                        newCoinField.clear();
+                    });
+                } catch (IOException ex) {
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Ошибка проверки монеты");
+                        alert.setHeaderText("Не удалось проверить монету " + normalized);
+                        alert.setContentText("Ошибка сети или API биржи: " + ex.getMessage());
+                        alert.showAndWait();
+                    });
+                }
+            }, "manual-coin-check-" + normalized);
+            t.setDaemon(true);
+            t.start();
+        });
+
+        Button refreshButton = new Button("Обновить с бирж");
+        refreshButton.setOnAction(e -> {
+            // Запуск в отдельном потоке, чтобы не блокировать UI
+            Thread t = new Thread(() -> {
+                try {
+                    CoinListGenerator.generateAndSave();
+                    List<String> symbols = coinStorage.loadMergedCoins();
+                    if (symbols.isEmpty()) {
+                        symbols = List.of("BTCUSDT", "ETHUSDT", "BNBUSDT");
+                    }
+                    List<String> finalSymbols = symbols;
+                    Platform.runLater(() -> {
+                        trackedCoins.clear();
+                        for (String s : finalSymbols) {
+                            trackedCoins.add(new TrackedCoin(s, true));
+                        }
+                    });
+                } catch (IOException ex) {
+                    String msg = ex.getMessage() != null ? ex.getMessage() : "Неизвестная ошибка";
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Ошибка обновления списка монет");
+                        alert.setHeaderText("Не удалось обновить список монет с бирж");
+                        alert.setContentText("Возможно, сеть недоступна или API бирж не отвечает вовремя.\n\nДетали: " + msg);
+                        alert.showAndWait();
+                    });
+                }
+            }, "coin-list-refresh");
+            t.setDaemon(true);
+            t.start();
+        });
+
+        Button clearButton = new Button("Очистить список");
+        clearButton.setOnAction(e -> {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Очистить список монет");
+            confirm.setHeaderText("Очистить список монет?");
+            confirm.setContentText("Список будет полностью очищен (и базовый, и добавленные вручную). Потом можно снова загрузить монеты кнопкой «Обновить с бирж».");
+            if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+                trackedCoins.clear();
+                coinStorage.clearAll();
             }
         });
-        addBox.getChildren().addAll(newCoinField, addButton);
+
+        addBox.getChildren().addAll(newCoinField, addButton, refreshButton, clearButton);
 
         box.getChildren().addAll(title, table, addBox);
         return box;
     }
 
+    private static final double ARB_SYMBOL_WIDTH = 110;
+    private static final double ARB_EXCHANGE_WIDTH = 120;
+    private static final double ARB_PRICE_WIDTH = 115;
+    private static final double ARB_SPREAD_WIDTH = 90;
+    private static final double ARB_PROFIT_WIDTH = 140;
+
     private VBox createArbitragePanel() {
-        VBox box = new VBox(8);
-        box.setPadding(new Insets(10));
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(12, 16, 12, 16));
 
         Label title = new Label("Наиболее выгодные арбитражные возможности");
 
         TableView<ArbitrageRow> table = new TableView<>(arbitrageRows);
-        table.setPrefHeight(260);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        VBox.setVgrow(table, Priority.ALWAYS);
 
         TableColumn<ArbitrageRow, String> symbolCol = new TableColumn<>("Монета");
         symbolCol.setCellValueFactory(new PropertyValueFactory<>("symbol"));
+        symbolCol.setPrefWidth(ARB_SYMBOL_WIDTH);
+        symbolCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item);
+                setAlignment(Pos.CENTER_LEFT);
+            }
+        });
 
         TableColumn<ArbitrageRow, String> buyExchangeCol = new TableColumn<>("Биржа покупки");
         buyExchangeCol.setCellValueFactory(new PropertyValueFactory<>("buyExchange"));
+        buyExchangeCol.setPrefWidth(ARB_EXCHANGE_WIDTH);
+        buyExchangeCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item);
+                setAlignment(Pos.CENTER_LEFT);
+            }
+        });
 
         TableColumn<ArbitrageRow, Double> buyPriceCol = new TableColumn<>("Цена покупки");
         buyPriceCol.setCellValueFactory(new PropertyValueFactory<>("buyPrice"));
+        buyPriceCol.setPrefWidth(ARB_PRICE_WIDTH);
 
         TableColumn<ArbitrageRow, String> sellExchangeCol = new TableColumn<>("Биржа продажи");
         sellExchangeCol.setCellValueFactory(new PropertyValueFactory<>("sellExchange"));
+        sellExchangeCol.setPrefWidth(ARB_EXCHANGE_WIDTH);
+        sellExchangeCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item);
+                setAlignment(Pos.CENTER_LEFT);
+            }
+        });
 
         TableColumn<ArbitrageRow, Double> sellPriceCol = new TableColumn<>("Цена продажи");
         sellPriceCol.setCellValueFactory(new PropertyValueFactory<>("sellPrice"));
+        sellPriceCol.setPrefWidth(ARB_PRICE_WIDTH);
 
         TableColumn<ArbitrageRow, Double> spreadCol = new TableColumn<>("Спред %");
         spreadCol.setCellValueFactory(new PropertyValueFactory<>("spreadPercent"));
+        spreadCol.setPrefWidth(ARB_SPREAD_WIDTH);
 
         TableColumn<ArbitrageRow, Double> profitCol = new TableColumn<>("Ожидаемая прибыль");
         profitCol.setCellValueFactory(new PropertyValueFactory<>("expectedProfit"));
+        profitCol.setPrefWidth(ARB_PROFIT_WIDTH);
+
+        DecimalFormat priceFormat = new DecimalFormat("0.0000");
+        DecimalFormat percentFormat = new DecimalFormat("0.00");
+
+        buyPriceCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Double value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty || value == null) {
+                    setText(null);
+                } else {
+                    setText(Double.toString(value));
+                    setAlignment(Pos.CENTER_RIGHT);
+                }
+            }
+        });
+
+        sellPriceCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Double value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty || value == null) {
+                    setText(null);
+                } else {
+                    setText(Double.toString(value));
+                    setAlignment(Pos.CENTER_RIGHT);
+                }
+            }
+        });
+
+        spreadCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Double value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty || value == null) {
+                    setText(null);
+                } else {
+                    setText(percentFormat.format(value));
+                    setAlignment(Pos.CENTER_RIGHT);
+                }
+            }
+        });
+
+        profitCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Double value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty || value == null) {
+                    setText(null);
+                } else {
+                    setText(priceFormat.format(value));
+                    setAlignment(Pos.CENTER_RIGHT);
+                }
+            }
+        });
 
         table.getColumns().addAll(symbolCol, buyExchangeCol, buyPriceCol, sellExchangeCol, sellPriceCol, spreadCol, profitCol);
 

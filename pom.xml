@@ -59,7 +59,8 @@
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
-                <version>${javafx.version}</version>
+                <!-- Версия плагина НЕ совпадает с версией JavaFX -->
+                <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.spread.app.MainApp</mainClass>
                 </configuration>

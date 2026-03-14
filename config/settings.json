@@ -1,0 +1,21 @@
+{
+  "deposit" : 1000.0,
+  "fees" : {
+    "BINANCE" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
+    },
+    "BYBIT" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
+    },
+    "OKX" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
+    },
+    "KUCOIN" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
+    }
+  }
+}

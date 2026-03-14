@@ -39,6 +39,12 @@ public class CoinStorage {
         }
     }
 
+    /** Очищает оба списка (базовый и пользовательский), после чего список монет будет пустым. */
+    public void clearAll() {
+        saveList(baseCoinsPath, List.of());
+        saveList(userCoinsPath, List.of());
+    }
+
     private List<String> loadList(Path path) {
         File file = path.toFile();
         if (!file.exists()) {
