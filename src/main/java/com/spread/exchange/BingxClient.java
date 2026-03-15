@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 public class BingxClient extends WebSocketListener implements ExchangeClient {
 
-    private static final String URL = "wss://open-api.bingx.com/market";
+    /** Spot WebSocket (документация: open-api.bingx.com, путь для spot stream). */
+    private static final String URL = "wss://open-api.bingx.com/openApi/spot";
 
     private static final ScheduledExecutorService RECONNECT_SCHEDULER =
             Executors.newSingleThreadScheduledExecutor();
@@ -115,7 +116,11 @@ public class BingxClient extends WebSocketListener implements ExchangeClient {
 
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-        System.err.println("BingxClient failure: " + (t != null ? t.getMessage() : "unknown"));
+        String msg = t != null ? t.getMessage() : "unknown";
+        if (msg == null && t != null) {
+            msg = t.getClass().getSimpleName();
+        }
+        System.err.println("BingxClient failure: " + msg);
         synchronized (this) {
             if (this.webSocket == webSocket && currentSymbols != null && !currentSymbols.isEmpty()) {
                 int attempt = ++reconnectAttempts;

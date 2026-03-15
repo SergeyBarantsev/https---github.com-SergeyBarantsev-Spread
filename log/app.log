@@ -123,3 +123,25 @@
 [2026-03-15 12:36:38] [INFO] Coins loaded: 679 symbols
 [2026-03-15 12:36:39] [INFO] Application started
 [2026-03-15 12:36:51] [INFO] Application stopped
+[2026-03-15 12:37:18] [INFO] Settings loaded
+[2026-03-15 12:37:18] [INFO] Coins loaded: 679 symbols
+[2026-03-15 12:37:19] [INFO] Application started
+[2026-03-15 12:37:25] [INFO] Coin list cleared
+[2026-03-15 12:37:26] [INFO] Refresh coin list started
+[2026-03-15 12:37:26] [INFO] Generate coin list started
+[2026-03-15 12:37:27] [INFO] Binance OK: 444 symbols
+[2026-03-15 12:37:28] [INFO] Bybit OK: 469 symbols
+[2026-03-15 12:37:28] [INFO] OKX OK: 292 symbols
+[2026-03-15 12:37:29] [INFO] KuCoin OK: 939 symbols
+[2026-03-15 12:37:42] [WARN] Gate.io failed: timeout
+[2026-03-15 12:37:43] [INFO] Bitget OK: 619 symbols
+[2026-03-15 12:37:54] [WARN] Kraken failed: timeout
+[2026-03-15 12:38:04] [WARN] HTX failed: timeout
+[2026-03-15 12:38:05] [INFO] MEXC OK: 2091 symbols
+[2026-03-15 12:38:07] [INFO] BingX OK: 933 symbols
+[2026-03-15 12:38:18] [WARN] LBank failed: Этот хост неизвестен (api.lbkex.com)
+[2026-03-15 12:38:19] [INFO] CoinEx OK: 1129 symbols
+[2026-03-15 12:38:19] [INFO] Generate coin list done: 1352 symbols from 8 exchanges -> D:cursorProjectsSpreadassetscoins.json
+[2026-03-15 12:38:19] [INFO] Refresh coin list OK: 1352 symbols
+[2026-03-15 12:38:30] [INFO] Connect to exchanges: 1352 symbols
+[2026-03-15 12:38:30] [INFO] Scheduler started

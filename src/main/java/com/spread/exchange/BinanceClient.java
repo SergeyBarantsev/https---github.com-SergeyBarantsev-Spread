@@ -13,6 +13,7 @@ import okhttp3.WebSocketListener;
 import okio.ByteString;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -23,6 +24,8 @@ import java.util.stream.Collectors;
 public class BinanceClient extends WebSocketListener implements ExchangeClient {
 
     private static final String BASE_URL = "wss://stream.binance.com:9443/stream?streams=";
+    /** Максимум символов в URI (~2048 лимит), один stream ~20 символов → до ~100 стримов на соединение. */
+    private static final int SYMBOLS_PER_CONNECTION = 100;
 
     private static final ScheduledExecutorService RECONNECT_SCHEDULER =
             Executors.newSingleThreadScheduledExecutor();
@@ -30,7 +33,7 @@ public class BinanceClient extends WebSocketListener implements ExchangeClient {
     private final OkHttpClient client;
     private final PriceAggregator aggregator;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private WebSocket webSocket;
+    private final List<WebSocket> webSockets = new ArrayList<>();
     private List<String> currentSymbols;
     private int reconnectAttempts;
 
@@ -47,21 +50,24 @@ public class BinanceClient extends WebSocketListener implements ExchangeClient {
         }
         reconnectAttempts = 0;
         currentSymbols = List.copyOf(symbols);
-        String streams = symbols.stream()
-                .map(s -> s.toLowerCase(Locale.ROOT) + "@bookTicker")
-                .collect(Collectors.joining("/"));
-        String url = BASE_URL + streams;
-
-        Request request = new Request.Builder().url(url).build();
-        webSocket = client.newWebSocket(request, this);
+        for (int i = 0; i < currentSymbols.size(); i += SYMBOLS_PER_CONNECTION) {
+            int end = Math.min(i + SYMBOLS_PER_CONNECTION, currentSymbols.size());
+            List<String> chunk = currentSymbols.subList(i, end);
+            String streams = chunk.stream()
+                    .map(s -> s.toLowerCase(Locale.ROOT) + "@bookTicker")
+                    .collect(Collectors.joining("/"));
+            String url = BASE_URL + streams;
+            Request request = new Request.Builder().url(url).build();
+            webSockets.add(client.newWebSocket(request, this));
+        }
     }
 
     @Override
     public synchronized void disconnect() {
-        if (webSocket != null) {
-            webSocket.close(1000, "client disconnect");
-            webSocket = null;
+        for (WebSocket ws : webSockets) {
+            ws.close(1000, "client disconnect");
         }
+        webSockets.clear();
     }
 
     @Override
@@ -100,9 +106,13 @@ public class BinanceClient extends WebSocketListener implements ExchangeClient {
 
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-        System.err.println("BinanceClient failure: " + (t != null ? t.getMessage() : "unknown"));
+        String msg = t != null ? t.getMessage() : "unknown";
+        if (msg == null && t != null) {
+            msg = t.getClass().getSimpleName();
+        }
+        System.err.println("BinanceClient failure: " + msg);
         synchronized (this) {
-            if (this.webSocket == webSocket && currentSymbols != null && !currentSymbols.isEmpty()) {
+            if (webSockets.contains(webSocket) && currentSymbols != null && !currentSymbols.isEmpty()) {
                 int attempt = ++reconnectAttempts;
                 long delaySeconds = Math.min(60, 1L << Math.min(attempt, 5));
                 RECONNECT_SCHEDULER.schedule(() -> connect(currentSymbols), delaySeconds, TimeUnit.SECONDS);

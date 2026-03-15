@@ -12,11 +12,18 @@ import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import okio.ByteString;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 public class CoinexClient extends WebSocketListener implements ExchangeClient {
 
@@ -119,7 +126,50 @@ public class CoinexClient extends WebSocketListener implements ExchangeClient {
 
     @Override
     public void onMessage(WebSocket webSocket, ByteString bytes) {
-        onMessage(webSocket, bytes.utf8());
+        String text = decompressCoinEx(bytes);
+        if (text != null) {
+            onMessage(webSocket, text);
+        }
+    }
+
+    /** CoinEx присылает сообщения в gzip/deflate или иногда plain JSON. */
+    private String decompressCoinEx(ByteString bytes) {
+        if (bytes == null || bytes.size() == 0) {
+            return null;
+        }
+        byte[] arr = bytes.toByteArray();
+        if (arr[0] == '{') {
+            return bytes.utf8();
+        }
+        if (arr.length < 2) {
+            return bytes.utf8();
+        }
+        try {
+            if (arr[0] == (byte) 0x1f && arr[1] == (byte) 0x8b) {
+                try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(arr));
+                     Reader r = new InputStreamReader(gzip, StandardCharsets.UTF_8)) {
+                    StringBuilder sb = new StringBuilder();
+                    char[] buf = new char[4096];
+                    int n;
+                    while ((n = r.read(buf)) > 0) {
+                        sb.append(buf, 0, n);
+                    }
+                    return sb.toString();
+                }
+            }
+            try (InflaterInputStream inf = new InflaterInputStream(new ByteArrayInputStream(arr), new Inflater(true));
+                 Reader r = new InputStreamReader(inf, StandardCharsets.UTF_8)) {
+                StringBuilder sb = new StringBuilder();
+                char[] buf = new char[4096];
+                int n;
+                while ((n = r.read(buf)) > 0) {
+                    sb.append(buf, 0, n);
+                }
+                return sb.toString();
+            }
+        } catch (Exception e) {
+            return bytes.utf8();
+        }
     }
 
     @Override

@@ -121,7 +121,11 @@ public class KrakenClient extends WebSocketListener implements ExchangeClient {
 
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-        System.err.println("KrakenClient failure: " + (t != null ? t.getMessage() : "unknown"));
+        String msg = t != null ? t.getMessage() : "unknown";
+        if (msg == null && t != null) {
+            msg = t.getClass().getSimpleName();
+        }
+        System.err.println("KrakenClient failure: " + msg);
         synchronized (this) {
             if (this.webSocket == webSocket && currentSymbols != null && !currentSymbols.isEmpty()) {
                 int attempt = ++reconnectAttempts;
