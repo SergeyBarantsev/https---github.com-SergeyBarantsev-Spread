@@ -13,7 +13,11 @@ public class Settings {
         GATEIO,
         BITGET,
         KRAKEN,
-        HTX
+        HTX,
+        MEXC,
+        BINGX,
+        LBANK,
+        COINEX
     }
 
     public static class FeeConfig {

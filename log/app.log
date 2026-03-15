@@ -73,3 +73,22 @@
 [2026-03-14 14:48:38] [INFO] Disconnected from exchanges
 [2026-03-14 14:48:39] [INFO] Connect to exchanges: 564 symbols
 [2026-03-14 14:48:39] [INFO] Scheduler started
+[2026-03-15 12:08:26] [INFO] Settings loaded
+[2026-03-15 12:08:26] [INFO] Coins loaded: 564 symbols
+[2026-03-15 12:08:27] [INFO] Application started
+[2026-03-15 12:09:39] [INFO] Coin list cleared
+[2026-03-15 12:09:41] [INFO] Refresh coin list started
+[2026-03-15 12:09:41] [INFO] Generate coin list started
+[2026-03-15 12:09:52] [WARN] Binance failed: Этот хост неизвестен (api.binance.com)
+[2026-03-15 12:09:54] [INFO] Bybit OK: 469 symbols
+[2026-03-15 12:09:58] [INFO] OKX OK: 292 symbols
+[2026-03-15 12:09:59] [INFO] KuCoin OK: 939 symbols
+[2026-03-15 12:10:14] [WARN] Gate.io failed: timeout
+[2026-03-15 12:10:18] [INFO] Bitget OK: 619 symbols
+[2026-03-15 12:10:29] [WARN] Kraken failed: timeout
+[2026-03-15 12:10:41] [WARN] HTX failed: timeout
+[2026-03-15 12:10:41] [INFO] Generate coin list done: 629 symbols from 4 exchanges -> D:cursorProjectsSpreadassetscoins.json
+[2026-03-15 12:10:41] [INFO] Refresh coin list OK: 629 symbols
+[2026-03-15 12:11:00] [INFO] Connect to exchanges: 629 symbols
+[2026-03-15 12:11:00] [INFO] Scheduler started
+[2026-03-15 12:12:30] [INFO] Application stopped

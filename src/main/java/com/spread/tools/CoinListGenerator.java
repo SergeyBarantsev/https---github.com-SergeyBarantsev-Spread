@@ -21,7 +21,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
- * Утилита для разового получения списка монет в паре к USDT с бирж Binance, Bybit, OKX, KuCoin, Gate.io, Bitget, Kraken, HTX.
+ * Утилита для разового получения списка монет в паре к USDT с бирж Binance, Bybit, OKX, KuCoin, Gate.io, Bitget, Kraken, HTX, MEXC, BingX, LBank, CoinEx.
  * Каждая биржа опрашивается отдельно; при таймауте или ошибке она пропускается.
  * Требуется минимум 2 успешных биржи для формирования списка (монеты, торгуемые хотя бы на двух).
  *
@@ -119,6 +119,42 @@ public class CoinListGenerator {
         } catch (Exception e) {
             AppLog.warn("HTX failed: {}", e.getMessage());
         }
+        try {
+            Set<String> s = fetchMexcUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.MEXC);
+            okCount++;
+            AppLog.info("MEXC OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("MEXC failed: {}", e.getMessage());
+        }
+        try {
+            Set<String> s = fetchBingxUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.BINGX);
+            okCount++;
+            AppLog.info("BingX OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("BingX failed: {}", e.getMessage());
+        }
+        try {
+            Set<String> s = fetchLbankUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.LBANK);
+            okCount++;
+            AppLog.info("LBank OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("LBank failed: {}", e.getMessage());
+        }
+        try {
+            Set<String> s = fetchCoinexUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.COINEX);
+            okCount++;
+            AppLog.info("CoinEx OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("CoinEx failed: {}", e.getMessage());
+        }
 
         if (okCount < MIN_EXCHANGES_REQUIRED) {
             AppLog.error("Generate coin list failed: only {} exchanges responded (min {})", okCount, MIN_EXCHANGES_REQUIRED);
@@ -173,6 +209,10 @@ public class CoinListGenerator {
         Set<String> bitget = fetchBitgetUsdtSymbols();
         Set<String> kraken = fetchKrakenUsdtSymbols();
         Set<String> htx = fetchHtxUsdtSymbols();
+        Set<String> mexc = fetchMexcUsdtSymbols();
+        Set<String> bingx = fetchBingxUsdtSymbols();
+        Set<String> lbank = fetchLbankUsdtSymbols();
+        Set<String> coinex = fetchCoinexUsdtSymbols();
 
         java.util.EnumMap<Settings.Exchange, Boolean> result = new java.util.EnumMap<>(Settings.Exchange.class);
         result.put(Settings.Exchange.BINANCE, binance.contains(normalized));
@@ -183,6 +223,10 @@ public class CoinListGenerator {
         result.put(Settings.Exchange.BITGET, bitget.contains(normalized));
         result.put(Settings.Exchange.KRAKEN, kraken.contains(normalized));
         result.put(Settings.Exchange.HTX, htx.contains(normalized));
+        result.put(Settings.Exchange.MEXC, mexc.contains(normalized));
+        result.put(Settings.Exchange.BINGX, bingx.contains(normalized));
+        result.put(Settings.Exchange.LBANK, lbank.contains(normalized));
+        result.put(Settings.Exchange.COINEX, coinex.contains(normalized));
         return result;
     }
 
@@ -372,6 +416,81 @@ public class CoinListGenerator {
                 continue;
             }
             result.add((base + "usdt").toUpperCase());
+        }
+        return result;
+    }
+
+    private static Set<String> fetchMexcUsdtSymbols() throws IOException {
+        String url = "https://api.mexc.com/api/v3/exchangeInfo";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        for (JsonNode sym : root.path("symbols")) {
+            String symbol = sym.path("symbol").asText(null);
+            String quote = sym.path("quoteAsset").asText("");
+            String status = sym.path("status").asText("");
+            if (symbol == null) {
+                continue;
+            }
+            if (!"USDT".equalsIgnoreCase(quote)) {
+                continue;
+            }
+            if (!"ENABLE".equalsIgnoreCase(status)) {
+                continue;
+            }
+            result.add(symbol.toUpperCase());
+        }
+        return result;
+    }
+
+    private static Set<String> fetchBingxUsdtSymbols() throws IOException {
+        String url = "https://open-api.bingx.com/openApi/spot/v1/common/symbols";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        for (JsonNode sym : root.path("data")) {
+            String symbol = sym.path("symbol").asText(null);
+            String quote = sym.path("quote").asText("");
+            String status = sym.path("status").asText("");
+            if (symbol == null) {
+                continue;
+            }
+            if (!"USDT".equalsIgnoreCase(quote)) {
+                continue;
+            }
+            if (!"ONLINE".equalsIgnoreCase(status)) {
+                continue;
+            }
+            result.add(symbol.replace("-", "").toUpperCase());
+        }
+        return result;
+    }
+
+    private static Set<String> fetchLbankUsdtSymbols() throws IOException {
+        String url = "https://api.lbank.com/v2/currencyPairs";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        for (JsonNode sym : root.path("data")) {
+            String pair = sym.path("pair").asText(null);
+            if (pair == null || !pair.toLowerCase().endsWith("_usdt")) {
+                continue;
+            }
+            result.add(pair.replace("_", "").toUpperCase());
+        }
+        return result;
+    }
+
+    private static Set<String> fetchCoinexUsdtSymbols() throws IOException {
+        String url = "https://api.coinex.com/v2/spot/market/list";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        JsonNode data = root.path("data");
+        if (!data.isObject()) {
+            return result;
+        }
+        for (java.util.Iterator<String> it = data.fieldNames(); it.hasNext(); ) {
+            String market = it.next();
+            if (market != null && market.toUpperCase().endsWith("USDT")) {
+                result.add(market.toUpperCase());
+            }
         }
         return result;
     }

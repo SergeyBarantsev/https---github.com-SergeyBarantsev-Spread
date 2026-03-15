@@ -57,6 +57,9 @@ public class ArbitrageCalculator {
                     }
 
                     double spreadPercent = (sellPrice - buyPrice) / buyPrice * 100.0;
+                    if (spreadPercent > 100.0) {
+                        continue;
+                    }
 
                     result.add(new ArbitrageOpportunity(
                             symbol,

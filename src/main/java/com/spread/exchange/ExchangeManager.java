@@ -25,6 +25,10 @@ public class ExchangeManager {
         clients.put(Exchange.BITGET, new BitgetClient(httpClient, aggregator));
         clients.put(Exchange.KRAKEN, new KrakenClient(httpClient, aggregator));
         clients.put(Exchange.HTX, new HtxClient(httpClient, aggregator));
+        clients.put(Exchange.MEXC, new MexcClient(httpClient, aggregator));
+        clients.put(Exchange.BINGX, new BingxClient(httpClient, aggregator));
+        clients.put(Exchange.LBANK, new LbankClient(httpClient, aggregator));
+        clients.put(Exchange.COINEX, new CoinexClient(httpClient, aggregator));
     }
 
     public void connectAll(List<String> symbols) {
