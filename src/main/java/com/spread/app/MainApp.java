@@ -82,18 +82,22 @@ public class MainApp extends Application {
         loadSettings();
         loadCoins();
 
-        // Главная вкладка: настройки (депозит, комиссии, кнопки) + таблица арбитража
+        // Вкладка мониторинга: депозит, кнопки + таблица арбитража
         BorderPane mainContent = new BorderPane();
-        mainContent.setTop(createSettingsPanel());
+        mainContent.setTop(createMonitoringTopPanel());
         mainContent.setCenter(createArbitragePanel());
         Tab mainTab = new Tab("Мониторинг", mainContent);
         mainTab.setClosable(false);
+
+        // Вкладка комиссий бирж
+        Tab feesTab = new Tab("Комиссии", createFeesPanel());
+        feesTab.setClosable(false);
 
         // Вкладка управления монетами
         Tab coinsTab = new Tab("Монеты", createCoinsPanel());
         coinsTab.setClosable(false);
 
-        TabPane tabPane = new TabPane(mainTab, coinsTab);
+        TabPane tabPane = new TabPane(mainTab, feesTab, coinsTab);
         root.setCenter(tabPane);
 
         Scene scene = new Scene(root, 1200, 700);
@@ -129,7 +133,7 @@ public class MainApp extends Application {
     private static final double DEPOSIT_FIELD_WIDTH = 140;
     private static final double FEE_FIELD_WIDTH = 72;
 
-    private VBox createSettingsPanel() {
+    private VBox createMonitoringTopPanel() {
         VBox box = new VBox(10);
         box.setPadding(new Insets(12, 16, 12, 16));
 
@@ -145,23 +149,6 @@ public class MainApp extends Application {
             depositField.setText(Double.toString(settings.getDeposit()));
         }
         depositBox.getChildren().addAll(depositLabel, depositField);
-
-        HBox feesHeader = new HBox(10);
-        feesHeader.setAlignment(Pos.CENTER_LEFT);
-        feesHeader.getChildren().add(new Label("Комиссии бирж (% покупка / продажа):"));
-
-        HBox binanceBox = createExchangeFeeRow("Binance", Exchange.BINANCE);
-        HBox bybitBox = createExchangeFeeRow("Bybit", Exchange.BYBIT);
-        HBox okxBox = createExchangeFeeRow("OKX", Exchange.OKX);
-        HBox kucoinBox = createExchangeFeeRow("KuCoin", Exchange.KUCOIN);
-        HBox gateioBox = createExchangeFeeRow("Gate.io", Exchange.GATEIO);
-        HBox bitgetBox = createExchangeFeeRow("Bitget", Exchange.BITGET);
-        HBox krakenBox = createExchangeFeeRow("Kraken", Exchange.KRAKEN);
-        HBox htxBox = createExchangeFeeRow("HTX", Exchange.HTX);
-        HBox mexcBox = createExchangeFeeRow("MEXC", Exchange.MEXC);
-        HBox bingxBox = createExchangeFeeRow("BingX", Exchange.BINGX);
-        HBox lbankBox = createExchangeFeeRow("LBank", Exchange.LBANK);
-        HBox coinexBox = createExchangeFeeRow("CoinEx", Exchange.COINEX);
 
         HBox buttonsBox = new HBox(12);
         buttonsBox.setAlignment(Pos.CENTER_LEFT);
@@ -212,7 +199,31 @@ public class MainApp extends Application {
             AppLog.info("Disconnected from exchanges");
         });
 
-        box.getChildren().addAll(depositBox, feesHeader, binanceBox, bybitBox, okxBox, kucoinBox, gateioBox, bitgetBox, krakenBox, htxBox, mexcBox, bingxBox, lbankBox, coinexBox, buttonsBox);
+        box.getChildren().addAll(depositBox, buttonsBox);
+        return box;
+    }
+
+    private VBox createFeesPanel() {
+        VBox box = new VBox(10);
+        box.setPadding(new Insets(12, 16, 12, 16));
+
+        HBox feesHeader = new HBox(10);
+        feesHeader.setAlignment(Pos.CENTER_LEFT);
+        feesHeader.getChildren().add(new Label("Комиссии бирж (% покупка / продажа):"));
+
+        box.getChildren().add(feesHeader);
+        box.getChildren().add(createExchangeFeeRow("Binance", Exchange.BINANCE));
+        box.getChildren().add(createExchangeFeeRow("Bybit", Exchange.BYBIT));
+        box.getChildren().add(createExchangeFeeRow("OKX", Exchange.OKX));
+        box.getChildren().add(createExchangeFeeRow("KuCoin", Exchange.KUCOIN));
+        box.getChildren().add(createExchangeFeeRow("Gate.io", Exchange.GATEIO));
+        box.getChildren().add(createExchangeFeeRow("Bitget", Exchange.BITGET));
+        box.getChildren().add(createExchangeFeeRow("Kraken", Exchange.KRAKEN));
+        box.getChildren().add(createExchangeFeeRow("HTX", Exchange.HTX));
+        box.getChildren().add(createExchangeFeeRow("MEXC", Exchange.MEXC));
+        box.getChildren().add(createExchangeFeeRow("BingX", Exchange.BINGX));
+        box.getChildren().add(createExchangeFeeRow("LBank", Exchange.LBANK));
+        box.getChildren().add(createExchangeFeeRow("CoinEx", Exchange.COINEX));
         return box;
     }
 

@@ -92,3 +92,7 @@
 [2026-03-15 12:11:00] [INFO] Connect to exchanges: 629 symbols
 [2026-03-15 12:11:00] [INFO] Scheduler started
 [2026-03-15 12:12:30] [INFO] Application stopped
+[2026-03-15 12:17:01] [INFO] Settings loaded
+[2026-03-15 12:17:01] [INFO] Coins loaded: 629 symbols
+[2026-03-15 12:17:02] [INFO] Application started
+[2026-03-15 12:17:25] [INFO] Application stopped

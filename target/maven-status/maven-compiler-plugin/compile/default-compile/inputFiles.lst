@@ -10,13 +10,17 @@ D:\cursorProjects\Spread\src\main\java\com\spread\core\service\PriceAggregator.j
 D:\cursorProjects\Spread\src\main\java\com\spread\core\storage\CoinStorage.java
 D:\cursorProjects\Spread\src\main\java\com\spread\core\storage\SettingsStorage.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\BinanceClient.java
+D:\cursorProjects\Spread\src\main\java\com\spread\exchange\BingxClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\BitgetClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\BybitClient.java
+D:\cursorProjects\Spread\src\main\java\com\spread\exchange\CoinexClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\ExchangeClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\ExchangeManager.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\GateioClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\HtxClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\KrakenClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\KucoinClient.java
+D:\cursorProjects\Spread\src\main\java\com\spread\exchange\LbankClient.java
+D:\cursorProjects\Spread\src\main\java\com\spread\exchange\MexcClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\exchange\OkxClient.java
 D:\cursorProjects\Spread\src\main\java\com\spread\tools\CoinListGenerator.java
