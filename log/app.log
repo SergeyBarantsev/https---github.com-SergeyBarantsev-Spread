@@ -40,3 +40,36 @@
 [2026-03-14 14:41:12] [INFO] Generate coin list done: 564 symbols from 4 exchanges -> D:cursorProjectsSpreadassetscoins.json
 [2026-03-14 14:41:12] [INFO] Refresh coin list OK: 564 symbols
 [2026-03-14 14:41:44] [INFO] Application stopped
+[2026-03-14 14:43:56] [INFO] Settings loaded
+[2026-03-14 14:43:56] [INFO] Coins loaded: 564 symbols
+[2026-03-14 14:43:57] [INFO] Application started
+[2026-03-14 14:44:02] [INFO] Coin list cleared
+[2026-03-14 14:44:13] [INFO] Add coin requested: BTCUSDT
+[2026-03-14 14:44:22] [INFO] Coin added: BTCUSDT
+[2026-03-14 14:44:25] [INFO] Coin list cleared
+[2026-03-14 14:44:25] [INFO] Refresh coin list started
+[2026-03-14 14:44:25] [INFO] Generate coin list started
+[2026-03-14 14:44:26] [INFO] Binance OK: 444 symbols
+[2026-03-14 14:44:27] [INFO] Bybit OK: 469 symbols
+[2026-03-14 14:44:27] [INFO] OKX OK: 292 symbols
+[2026-03-14 14:44:27] [INFO] KuCoin OK: 939 symbols
+[2026-03-14 14:44:27] [INFO] Generate coin list done: 564 symbols from 4 exchanges -> D:cursorProjectsSpreadassetscoins.json
+[2026-03-14 14:44:27] [INFO] Refresh coin list OK: 564 symbols
+[2026-03-14 14:44:45] [INFO] Connect to exchanges: 564 symbols
+[2026-03-14 14:44:45] [INFO] Scheduler started
+[2026-03-14 14:45:25] [INFO] Application stopped
+[2026-03-14 14:45:37] [INFO] Settings loaded
+[2026-03-14 14:45:37] [INFO] Coins loaded: 564 symbols
+[2026-03-14 14:45:38] [INFO] Application started
+[2026-03-14 14:45:40] [INFO] Connect to exchanges: 564 symbols
+[2026-03-14 14:45:40] [INFO] Scheduler started
+[2026-03-14 14:46:28] [INFO] Application stopped
+[2026-03-14 14:47:36] [INFO] Settings loaded
+[2026-03-14 14:47:36] [INFO] Coins loaded: 564 symbols
+[2026-03-14 14:47:37] [INFO] Application started
+[2026-03-14 14:47:40] [INFO] Connect to exchanges: 564 symbols
+[2026-03-14 14:47:41] [INFO] Scheduler started
+[2026-03-14 14:48:31] [INFO] Disconnected from exchanges
+[2026-03-14 14:48:38] [INFO] Disconnected from exchanges
+[2026-03-14 14:48:39] [INFO] Connect to exchanges: 564 symbols
+[2026-03-14 14:48:39] [INFO] Scheduler started

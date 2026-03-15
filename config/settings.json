@@ -1,5 +1,5 @@
 {
-  "deposit" : 1000.0,
+  "deposit" : 5000.0,
   "fees" : {
     "BINANCE" : {
       "buyFeePercent" : 0.1,

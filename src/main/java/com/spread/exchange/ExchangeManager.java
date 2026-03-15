@@ -21,6 +21,10 @@ public class ExchangeManager {
         clients.put(Exchange.BYBIT, new BybitClient(httpClient, aggregator));
         clients.put(Exchange.OKX, new OkxClient(httpClient, aggregator));
         clients.put(Exchange.KUCOIN, new KucoinClient(httpClient, aggregator));
+        clients.put(Exchange.GATEIO, new GateioClient(httpClient, aggregator));
+        clients.put(Exchange.BITGET, new BitgetClient(httpClient, aggregator));
+        clients.put(Exchange.KRAKEN, new KrakenClient(httpClient, aggregator));
+        clients.put(Exchange.HTX, new HtxClient(httpClient, aggregator));
     }
 
     public void connectAll(List<String> symbols) {

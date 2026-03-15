@@ -141,7 +141,7 @@ public class KucoinClient extends WebSocketListener implements ExchangeClient {
         }
     }
 
-    /** Пишет полный текст ошибки в UTF-8 файл, чтобы прочитать сообщение в любой кодировке (в т.ч. кириллицу). */
+    /** Пишет ошибку в UTF-8 файл. Для обрывов соединения (SocketException, EOFException) — краткая запись без stack trace. */
     private static void logFailureToFile(Throwable t) {
         if (t == null) {
             return;
@@ -153,13 +153,25 @@ public class KucoinClient extends WebSocketListener implements ExchangeClient {
             StringWriter sw = new StringWriter();
             sw.append("--- ").append(Instant.now().toString()).append(" ---\n");
             sw.append("Message: ").append(t.getMessage() != null ? t.getMessage() : "(null)").append("\n");
-            t.printStackTrace(new PrintWriter(sw));
+            if (isConnectionClosedError(t)) {
+                sw.append("(Обрыв соединения — переподключение выполнится автоматически.)\n");
+            } else {
+                t.printStackTrace(new PrintWriter(sw));
+            }
             sw.append("\n");
             Files.write(logFile, sw.toString().getBytes(StandardCharsets.UTF_8),
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (Exception e) {
             System.err.println("Could not write KucoinClient error to log: " + e.getMessage());
         }
+    }
+
+    private static boolean isConnectionClosedError(Throwable t) {
+        if (t == null) return false;
+        String name = t.getClass().getSimpleName();
+        if ("SocketException".equals(name) || "EOFException".equals(name)) return true;
+        Throwable cause = t.getCause();
+        return cause != null && isConnectionClosedError(cause);
     }
 
     /** Сообщение для консоли без кириллицы, чтобы не ломаться в другой кодировке. */

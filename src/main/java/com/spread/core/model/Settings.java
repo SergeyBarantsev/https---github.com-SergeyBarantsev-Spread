@@ -9,7 +9,11 @@ public class Settings {
         BINANCE,
         BYBIT,
         OKX,
-        KUCOIN
+        KUCOIN,
+        GATEIO,
+        BITGET,
+        KRAKEN,
+        HTX
     }
 
     public static class FeeConfig {

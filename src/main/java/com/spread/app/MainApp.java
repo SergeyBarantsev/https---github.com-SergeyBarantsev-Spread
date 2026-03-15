@@ -154,6 +154,10 @@ public class MainApp extends Application {
         HBox bybitBox = createExchangeFeeRow("Bybit", Exchange.BYBIT);
         HBox okxBox = createExchangeFeeRow("OKX", Exchange.OKX);
         HBox kucoinBox = createExchangeFeeRow("KuCoin", Exchange.KUCOIN);
+        HBox gateioBox = createExchangeFeeRow("Gate.io", Exchange.GATEIO);
+        HBox bitgetBox = createExchangeFeeRow("Bitget", Exchange.BITGET);
+        HBox krakenBox = createExchangeFeeRow("Kraken", Exchange.KRAKEN);
+        HBox htxBox = createExchangeFeeRow("HTX", Exchange.HTX);
 
         HBox buttonsBox = new HBox(12);
         buttonsBox.setAlignment(Pos.CENTER_LEFT);
@@ -204,7 +208,7 @@ public class MainApp extends Application {
             AppLog.info("Disconnected from exchanges");
         });
 
-        box.getChildren().addAll(depositBox, feesHeader, binanceBox, bybitBox, okxBox, kucoinBox, buttonsBox);
+        box.getChildren().addAll(depositBox, feesHeader, binanceBox, bybitBox, okxBox, kucoinBox, gateioBox, bitgetBox, krakenBox, htxBox, buttonsBox);
         return box;
     }
 

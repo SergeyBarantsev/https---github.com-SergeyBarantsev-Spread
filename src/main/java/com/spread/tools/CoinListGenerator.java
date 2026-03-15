@@ -21,7 +21,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
- * Утилита для разового получения списка монет в паре к USDT с бирж Binance, Bybit, OKX, KuCoin.
+ * Утилита для разового получения списка монет в паре к USDT с бирж Binance, Bybit, OKX, KuCoin, Gate.io, Bitget, Kraken, HTX.
  * Каждая биржа опрашивается отдельно; при таймауте или ошибке она пропускается.
  * Требуется минимум 2 успешных биржи для формирования списка (монеты, торгуемые хотя бы на двух).
  *
@@ -83,6 +83,42 @@ public class CoinListGenerator {
         } catch (Exception e) {
             AppLog.warn("KuCoin failed: {}", e.getMessage());
         }
+        try {
+            Set<String> s = fetchGateioUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.GATEIO);
+            okCount++;
+            AppLog.info("Gate.io OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("Gate.io failed: {}", e.getMessage());
+        }
+        try {
+            Set<String> s = fetchBitgetUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.BITGET);
+            okCount++;
+            AppLog.info("Bitget OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("Bitget failed: {}", e.getMessage());
+        }
+        try {
+            Set<String> s = fetchKrakenUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.KRAKEN);
+            okCount++;
+            AppLog.info("Kraken OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("Kraken failed: {}", e.getMessage());
+        }
+        try {
+            Set<String> s = fetchHtxUsdtSymbols();
+            incrementCounts(counts, s);
+            addExchanges(symbolToExchanges, s, Settings.Exchange.HTX);
+            okCount++;
+            AppLog.info("HTX OK: {} symbols", s.size());
+        } catch (Exception e) {
+            AppLog.warn("HTX failed: {}", e.getMessage());
+        }
 
         if (okCount < MIN_EXCHANGES_REQUIRED) {
             AppLog.error("Generate coin list failed: only {} exchanges responded (min {})", okCount, MIN_EXCHANGES_REQUIRED);
@@ -133,12 +169,20 @@ public class CoinListGenerator {
         Set<String> bybit = fetchBybitUsdtSymbols();
         Set<String> okx = fetchOkxUsdtSymbols();
         Set<String> kucoin = fetchKucoinUsdtSymbols();
+        Set<String> gateio = fetchGateioUsdtSymbols();
+        Set<String> bitget = fetchBitgetUsdtSymbols();
+        Set<String> kraken = fetchKrakenUsdtSymbols();
+        Set<String> htx = fetchHtxUsdtSymbols();
 
         java.util.EnumMap<Settings.Exchange, Boolean> result = new java.util.EnumMap<>(Settings.Exchange.class);
         result.put(Settings.Exchange.BINANCE, binance.contains(normalized));
         result.put(Settings.Exchange.BYBIT, bybit.contains(normalized));
         result.put(Settings.Exchange.OKX, okx.contains(normalized));
         result.put(Settings.Exchange.KUCOIN, kucoin.contains(normalized));
+        result.put(Settings.Exchange.GATEIO, gateio.contains(normalized));
+        result.put(Settings.Exchange.BITGET, bitget.contains(normalized));
+        result.put(Settings.Exchange.KRAKEN, kraken.contains(normalized));
+        result.put(Settings.Exchange.HTX, htx.contains(normalized));
         return result;
     }
 
@@ -238,6 +282,96 @@ public class CoinListGenerator {
             }
             String normalized = name.replace("-", "").toUpperCase();
             result.add(normalized);
+        }
+        return result;
+    }
+
+    private static Set<String> fetchGateioUsdtSymbols() throws IOException {
+        String url = "https://api.gateio.ws/api/v4/spot/currency_pairs";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        for (JsonNode sym : root) {
+            String id = sym.path("id").asText(null);
+            String quote = sym.path("quote").asText("");
+            String status = sym.path("trade_status").asText("");
+            if (id == null) {
+                continue;
+            }
+            if (!"USDT".equalsIgnoreCase(quote)) {
+                continue;
+            }
+            if (!"tradable".equalsIgnoreCase(status)) {
+                continue;
+            }
+            result.add(id.replace("_", "").toUpperCase());
+        }
+        return result;
+    }
+
+    private static Set<String> fetchBitgetUsdtSymbols() throws IOException {
+        String url = "https://api.bitget.com/api/v2/spot/public/symbols";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        for (JsonNode sym : root.path("data")) {
+            String symbol = sym.path("symbol").asText(null);
+            String quote = sym.path("quoteCoin").asText("");
+            String status = sym.path("status").asText("");
+            if (symbol == null) {
+                continue;
+            }
+            if (!"USDT".equalsIgnoreCase(quote)) {
+                continue;
+            }
+            if (!"online".equalsIgnoreCase(status)) {
+                continue;
+            }
+            result.add(symbol.toUpperCase());
+        }
+        return result;
+    }
+
+    private static Set<String> fetchKrakenUsdtSymbols() throws IOException {
+        String url = "https://api.kraken.com/0/public/AssetPairs";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        JsonNode pairs = root.path("result");
+        if (!pairs.isObject()) {
+            return result;
+        }
+        for (java.util.Iterator<String> it = pairs.fieldNames(); it.hasNext(); ) {
+            JsonNode p = pairs.get(it.next());
+            String quote = p.path("quote").asText("");
+            if (!"usdt".equalsIgnoreCase(quote)) {
+                continue;
+            }
+            String base = p.path("base").asText("");
+            if (base.isEmpty()) {
+                continue;
+            }
+            String normBase = "XXBT".equals(base) || "XBT".equals(base) ? "BTC" : base.startsWith("X") ? base.substring(1) : base;
+            result.add((normBase + "USDT").toUpperCase());
+        }
+        return result;
+    }
+
+    private static Set<String> fetchHtxUsdtSymbols() throws IOException {
+        String url = "https://api.huobi.pro/v1/common/symbols";
+        JsonNode root = getJson(url);
+        Set<String> result = new HashSet<>();
+        for (JsonNode sym : root.path("data")) {
+            String base = sym.path("base-currency").asText("");
+            String quote = sym.path("quote-currency").asText("");
+            String state = sym.path("state").asText("");
+            if (base.isEmpty()) {
+                continue;
+            }
+            if (!"usdt".equalsIgnoreCase(quote)) {
+                continue;
+            }
+            if (!"online".equalsIgnoreCase(state)) {
+                continue;
+            }
+            result.add((base + "usdt").toUpperCase());
         }
         return result;
     }
