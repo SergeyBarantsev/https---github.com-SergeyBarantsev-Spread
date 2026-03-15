@@ -96,3 +96,30 @@
 [2026-03-15 12:17:01] [INFO] Coins loaded: 629 symbols
 [2026-03-15 12:17:02] [INFO] Application started
 [2026-03-15 12:17:25] [INFO] Application stopped
+[2026-03-15 12:19:45] [INFO] Settings loaded
+[2026-03-15 12:19:45] [INFO] Coins loaded: 629 symbols
+[2026-03-15 12:19:46] [INFO] Application started
+[2026-03-15 12:20:13] [INFO] Coin list cleared
+[2026-03-15 12:20:15] [INFO] Refresh coin list started
+[2026-03-15 12:20:15] [INFO] Generate coin list started
+[2026-03-15 12:20:17] [INFO] Binance OK: 444 symbols
+[2026-03-15 12:20:18] [INFO] Bybit OK: 469 symbols
+[2026-03-15 12:20:19] [INFO] OKX OK: 292 symbols
+[2026-03-15 12:20:19] [INFO] KuCoin OK: 939 symbols
+[2026-03-15 12:20:33] [WARN] Gate.io failed: timeout
+[2026-03-15 12:20:33] [INFO] Bitget OK: 619 symbols
+[2026-03-15 12:20:45] [WARN] Kraken failed: timeout
+[2026-03-15 12:20:56] [WARN] HTX failed: timeout
+[2026-03-15 12:20:58] [INFO] MEXC OK: 0 symbols
+[2026-03-15 12:20:59] [INFO] BingX OK: 0 symbols
+[2026-03-15 12:21:00] [WARN] LBank failed: Этот хост неизвестен (api.lbank.com)
+[2026-03-15 12:21:01] [WARN] CoinEx failed: HTTP 404 for https://api.coinex.com/v2/spot/market/list
+[2026-03-15 12:21:01] [INFO] Generate coin list done: 679 symbols from 7 exchanges -> D:cursorProjectsSpreadassetscoins.json
+[2026-03-15 12:21:01] [INFO] Refresh coin list OK: 679 symbols
+[2026-03-15 12:21:17] [INFO] Connect to exchanges: 679 symbols
+[2026-03-15 12:21:17] [INFO] Scheduler started
+[2026-03-15 12:36:21] [INFO] Application stopped
+[2026-03-15 12:36:38] [INFO] Settings loaded
+[2026-03-15 12:36:38] [INFO] Coins loaded: 679 symbols
+[2026-03-15 12:36:39] [INFO] Application started
+[2026-03-15 12:36:51] [INFO] Application stopped

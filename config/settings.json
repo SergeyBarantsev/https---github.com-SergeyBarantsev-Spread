@@ -32,6 +32,22 @@
     "HTX" : {
       "buyFeePercent" : 0.1,
       "sellFeePercent" : 0.1
+    },
+    "MEXC" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
+    },
+    "BINGX" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
+    },
+    "LBANK" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
+    },
+    "COINEX" : {
+      "buyFeePercent" : 0.1,
+      "sellFeePercent" : 0.1
     }
   }
 }

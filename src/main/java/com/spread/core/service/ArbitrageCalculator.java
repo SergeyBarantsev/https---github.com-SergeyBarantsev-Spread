@@ -52,7 +52,7 @@ public class ArbitrageCalculator {
                     double revenue = qty * sellPriceEff;
                     double profit = revenue - deposit;
 
-                    if (profit <= 0) {
+                    if (profit < 5.0) {
                         continue;
                     }
 

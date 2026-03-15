@@ -434,7 +434,7 @@ public class CoinListGenerator {
             if (!"USDT".equalsIgnoreCase(quote)) {
                 continue;
             }
-            if (!"ENABLE".equalsIgnoreCase(status)) {
+            if (!"ENABLE".equalsIgnoreCase(status) && !"1".equals(status)) {
                 continue;
             }
             result.add(symbol.toUpperCase());
@@ -446,17 +446,17 @@ public class CoinListGenerator {
         String url = "https://open-api.bingx.com/openApi/spot/v1/common/symbols";
         JsonNode root = getJson(url);
         Set<String> result = new HashSet<>();
-        for (JsonNode sym : root.path("data")) {
+        JsonNode symbolsNode = root.path("data").path("symbols");
+        if (!symbolsNode.isArray()) {
+            return result;
+        }
+        for (JsonNode sym : symbolsNode) {
             String symbol = sym.path("symbol").asText(null);
-            String quote = sym.path("quote").asText("");
-            String status = sym.path("status").asText("");
-            if (symbol == null) {
+            if (symbol == null || !symbol.endsWith("-USDT")) {
                 continue;
             }
-            if (!"USDT".equalsIgnoreCase(quote)) {
-                continue;
-            }
-            if (!"ONLINE".equalsIgnoreCase(status)) {
+            int status = sym.path("status").asInt(-1);
+            if (status != 1) {
                 continue;
             }
             result.add(symbol.replace("-", "").toUpperCase());
@@ -465,7 +465,7 @@ public class CoinListGenerator {
     }
 
     private static Set<String> fetchLbankUsdtSymbols() throws IOException {
-        String url = "https://api.lbank.com/v2/currencyPairs";
+        String url = "https://api.lbkex.com/v2/currencyPairs";
         JsonNode root = getJson(url);
         Set<String> result = new HashSet<>();
         for (JsonNode sym : root.path("data")) {
@@ -479,18 +479,19 @@ public class CoinListGenerator {
     }
 
     private static Set<String> fetchCoinexUsdtSymbols() throws IOException {
-        String url = "https://api.coinex.com/v2/spot/market/list";
+        String url = "https://api.coinex.com/v2/spot/ticker";
         JsonNode root = getJson(url);
         Set<String> result = new HashSet<>();
         JsonNode data = root.path("data");
-        if (!data.isObject()) {
+        if (!data.isArray()) {
             return result;
         }
-        for (java.util.Iterator<String> it = data.fieldNames(); it.hasNext(); ) {
-            String market = it.next();
-            if (market != null && market.toUpperCase().endsWith("USDT")) {
-                result.add(market.toUpperCase());
+        for (JsonNode item : data) {
+            String market = item.path("market").asText(null);
+            if (market == null || !market.toUpperCase().endsWith("USDT") || market.contains("_")) {
+                continue;
             }
+            result.add(market.toUpperCase());
         }
         return result;
     }
